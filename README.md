@@ -1,5 +1,5 @@
 # Android OAuth with Biometrics
-A proof-of-concept application to log into an example Auth0 instance with a PKCE flow and allow secure retrieval of the access and refresh tokens with biometrics
+🔐 A proof-of-concept application to log into an example Auth0 instance with a PKCE flow and allow secure retrieval of the access and refresh tokens with biometrics
 
 Here are some useful sources that I consulted before building this project:
 - [Using BiometricPrompt with CryptoObject](https://medium.com/androiddevelopers/using-biometricprompt-with-cryptoobject-how-and-why-aace500ccdb7)

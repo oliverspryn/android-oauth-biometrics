@@ -1,7 +1,7 @@
 package com.oliverspryn.android.oauthbiometrics.ui
 
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -19,11 +19,10 @@ fun OAuth() {
             startDestination = "start"
         ) {
             composable("start") {
-                val viewModel: StartViewModel = viewModel()
+                val viewModel: StartViewModel = hiltViewModel()
 
                 StartScreen(
                     startViewModel = viewModel,
-                    onLoginTap = {},
                     onReauthTap = {}
                 )
             }
