@@ -15,11 +15,11 @@ class BuildConfigModule {
         const val OAUTH_CLIENT_ID =
             "com.oliverspryn.android.oauthbiometrics.di.modules.BuildConfigModule.OAUTH_CLIENT_ID"
 
-        const val OAUTH_REDIRECT_URI =
-            "com.oliverspryn.android.oauthbiometrics.di.modules.BuildConfigModule.OAUTH_REDIRECT_URI"
-
         const val OPENID_CONFIG_URL =
             "com.oliverspryn.android.oauthbiometrics.di.modules.BuildConfigModule.OPENID_CONFIG_URL"
+
+        const val OAUTH_LOGIN_REDIRECT_URI =
+            "com.oliverspryn.android.oauthbiometrics.di.modules.BuildConfigModule.OAUTH_LOGIN_REDIRECT_URI"
     }
 
     @Provides
@@ -27,8 +27,8 @@ class BuildConfigModule {
     fun provideOAuthClientId(): String = BuildConfig.OAUTH_CLIENT_ID
 
     @Provides
-    @Named(OAUTH_REDIRECT_URI)
-    fun provideOAuthRedirectUri(): String = BuildConfig.OAUTH_REDIRECT_URI
+    @Named(OAUTH_LOGIN_REDIRECT_URI)
+    fun provideOAuthLoginRedirectUri(): String = BuildConfig.OAUTH_LOGIN_REDIRECT_URI
 
     @Provides
     @Named(OPENID_CONFIG_URL)

@@ -1,25 +1,12 @@
 package com.oliverspryn.android.oauthbiometrics.domain.usecases
 
-import android.annotation.SuppressLint
-import android.app.PendingIntent
-import android.content.Context
-import android.os.Build
-import com.oliverspryn.android.oauthbiometrics.MainActivity
-import com.oliverspryn.android.oauthbiometrics.di.factories.AuthStateFactory
-import com.oliverspryn.android.oauthbiometrics.di.factories.AuthorizationServiceFactory
-import com.oliverspryn.android.oauthbiometrics.di.factories.IntentFactory
-import com.oliverspryn.android.oauthbiometrics.di.factories.RxJavaFactory
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.AuthorizationRequestBuilderForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.AuthorizationServiceConfigurationForwarder
-import com.oliverspryn.android.oauthbiometrics.di.forwarders.PendingIntentForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.UriForwarder
 import com.oliverspryn.android.oauthbiometrics.di.modules.BuildConfigModule
-import com.oliverspryn.android.oauthbiometrics.di.modules.BuildModule
 import com.oliverspryn.android.oauthbiometrics.domain.exceptions.AuthorizationServiceCouldNotBeConfigured
-import dagger.hilt.android.qualifiers.ApplicationContext
-import io.reactivex.rxjava3.core.Completable
+import com.oliverspryn.android.oauthbiometrics.utils.AuthStateManager
 import io.reactivex.rxjava3.core.Single
-import net.openid.appauth.AuthState
 import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
@@ -29,52 +16,17 @@ import javax.inject.Named
 class InitializeOAuthLoginFlowUseCase @Inject constructor(
     private val authorizationRequestBuilderForwarder: AuthorizationRequestBuilderForwarder,
     private val authorizationServiceConfigurationForwarder: AuthorizationServiceConfigurationForwarder,
-    private val authServiceFactory: AuthorizationServiceFactory,
-    private val authStateFactory: AuthStateFactory,
+    private val authStateManager: AuthStateManager,
     @Named(BuildConfigModule.OAUTH_CLIENT_ID) private val clientId: String,
-    @ApplicationContext private val context: Context,
-    private val intentFactory: IntentFactory,
     @Named(BuildConfigModule.OPENID_CONFIG_URL) private val openIdConfigUrl: String,
-    private val pendingIntentForwarder: PendingIntentForwarder,
-    @Named(BuildConfigModule.OAUTH_REDIRECT_URI) private val redirectUri: String,
-    private val rxJavaFactory: RxJavaFactory,
-    @Named(BuildModule.SDK_INT) private val sdkInt: Int,
+    @Named(BuildConfigModule.OAUTH_LOGIN_REDIRECT_URI) private val redirectUri: String,
     private val uriForwarder: UriForwarder
 ) {
 
-    companion object {
-        const val REQUEST_CODE = 14529
-    }
-
-    operator fun invoke(): Completable = Completable
-        .complete()
-        .observeOn(rxJavaFactory.io)
-        .andThen(configAuthService())
-        .flatMap { serviceConfig ->
-            Single.just(buildRequestAndAuthState(serviceConfig))
+    operator fun invoke(): Single<AuthorizationRequest> = configAuthService()
+        .flatMap { callChain ->
+            Single.just(buildRequest(callChain))
         }
-        .flatMapCompletable { callChain ->
-            openBrowserForLogin(callChain)
-            Completable.complete()
-        }
-
-    private fun buildRequestAndAuthState(
-        serviceConfig: AuthorizationServiceConfiguration
-    ): CallChain {
-        val request = authorizationRequestBuilderForwarder
-            .build(
-                configuration = serviceConfig,
-                clientId = clientId,
-                responseType = ResponseTypeValues.CODE,
-                redirectUri = uriForwarder.parse(redirectUri)
-            )
-            .build()
-
-        return CallChain(
-            authRequest = request,
-            authState = authStateFactory.newInstance(serviceConfig)
-        )
-    }
 
     private fun configAuthService(): Single<AuthorizationServiceConfiguration> = Single
         .create { emitter ->
@@ -91,36 +43,38 @@ class InitializeOAuthLoginFlowUseCase @Inject constructor(
                     return@fetchFromIssuer
                 }
 
+                authStateManager.setAuthServiceConfiguration(serviceConfiguration)
                 emitter.onSuccess(serviceConfiguration)
             }
         }
 
-    @SuppressLint("InlinedApi") // Lint tool doesn't know I checked properly
-    private fun openBrowserForLogin(callChain: CallChain) {
-        var flags = 0
-
-        // Per: https://github.com/openid/AppAuth-Android/issues/746
-        if (sdkInt >= Build.VERSION_CODES.S) {
-            flags = PendingIntent.FLAG_MUTABLE
-        }
-
-        val authService = authServiceFactory.newInstance(context)
-        val pendingIntent = pendingIntentForwarder.getActivity(
-            context,
-            REQUEST_CODE,
-            intentFactory.newInstance(context, MainActivity::class.java),
-            flags
+    private fun buildRequest(
+        serviceConfiguration: AuthorizationServiceConfiguration
+    ) = authorizationRequestBuilderForwarder
+        .build(
+            configuration = serviceConfiguration,
+            clientId = clientId,
+            responseType = ResponseTypeValues.CODE,
+            redirectUri = uriForwarder.parse(redirectUri)
         )
-
-        authService.performAuthorizationRequest(
-            callChain.authRequest,
-            pendingIntent,
-            pendingIntent
+        .setScopes(
+            "offline_access", // Required for refresh token: https://auth0.com/docs/secure/tokens/refresh-tokens/get-refresh-tokens
+            "openid",         // Used to get user's profile
+            "profile",        // info from Auth0
+            "email"           // Per: https://auth0.com/docs/api/authentication#user-profile
         )
-    }
+        .build()
+
+//    private fun warmUpBrowser(callChain: RequestCallChain): WarmUpCallChain {
+//        val authService = authServiceFactory.newInstance(context)
+//        val intentBuilder = authService.createCustomTabsIntentBuilder(
+//            callChain.authRequest.toUri()
+//        )
+//
+//        return WarmUpCallChain(
+//            authRequest = callChain.authRequest,
+//            authState = callChain.authState,
+//            browserIntent = intentBuilder.build()
+//        )
+//    }
 }
-
-data class CallChain(
-    val authRequest: AuthorizationRequest,
-    val authState: AuthState
-)

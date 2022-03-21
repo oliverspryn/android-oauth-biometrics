@@ -4,7 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.oliverspryn.android.oauthbiometrics.ui.OAuth
+import com.oliverspryn.android.oauthbiometrics.utils.AuthStateManager
 import dagger.hilt.android.AndroidEntryPoint
+import net.openid.appauth.AuthorizationException
+import net.openid.appauth.AuthorizationResponse
+import net.openid.appauth.AuthorizationService
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -12,7 +16,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            OAuth()
+            OAuth(this)
         }
     }
 }

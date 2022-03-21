@@ -4,18 +4,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oliverspryn.android.oauthbiometrics.di.factories.RxJavaFactory
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.InitializeOAuthLoginFlowUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.LaunchOAuthLoginFlowUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import net.openid.appauth.AuthorizationRequest
 import javax.inject.Inject
 
 @HiltViewModel
 class StartViewModel @Inject constructor(
-    private val initializeOAuthLoginFlowUseCase: InitializeOAuthLoginFlowUseCase,
-    private val rxJavaFactory: RxJavaFactory
+    initializeOAuthLoginFlowUseCase: InitializeOAuthLoginFlowUseCase,
+    private val launchOAuthLoginFlowUseCase: LaunchOAuthLoginFlowUseCase,
+    rxJavaFactory: RxJavaFactory
 ) : ViewModel() {
+
+    private var authRequest: AuthorizationRequest? = null
     private val viewModelState = MutableStateFlow(StartUiState())
 
     val uiState = viewModelState
@@ -25,61 +30,43 @@ class StartViewModel @Inject constructor(
             StartUiState()
         )
 
-    fun doLogin() {
+    init {
         initializeOAuthLoginFlowUseCase()
             .subscribeOn(rxJavaFactory.io)
-            .doOnSubscribe {
-                rxJavaFactory.io.scheduleDirect {
-                    viewModelState.update {
-                        it.copy(
-                            isLoading = true
-                        )
-                    }
-                }
-            }
-            .doOnComplete {
-                rxJavaFactory.io.scheduleDirect {
-                    viewModelState.update {
-                        it.copy(
-                            isLoading = false
-                        )
-                    }
-                }
-            }
-            .doOnError {
-                rxJavaFactory.io.scheduleDirect {
-                    viewModelState.update {
-                        it.copy(
-                            isLoading = false
-                        )
-                    }
-                }
-            }
+            .doOnSubscribe { setIsLoading() }
+            .doOnSuccess { setIsLoadingComplete() }
+            .doOnError { setIsLoadingComplete() }
             .subscribe({
-
+                authRequest = it
             }, {
 
             })
     }
 
-    fun setReauthEnabled() {
+    fun doLogin() {
+        authRequest?.let { request ->
+            launchOAuthLoginFlowUseCase(request)
+        }
+    }
+
+    private fun setIsLoading() {
         viewModelState.update {
             it.copy(
-                isReauthEnabled = true
+                isLoading = true
             )
         }
     }
 
-    fun setReauthDisabled() {
+    private fun setIsLoadingComplete() {
         viewModelState.update {
             it.copy(
-                isReauthEnabled = false
+                isLoading = false
             )
         }
     }
 }
 
 data class StartUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val isReauthEnabled: Boolean = false
 )

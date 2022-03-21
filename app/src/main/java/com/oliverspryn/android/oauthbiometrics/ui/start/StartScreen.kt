@@ -1,6 +1,7 @@
 package com.oliverspryn.android.oauthbiometrics.ui.start
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -17,23 +18,20 @@ import com.oliverspryn.android.oauthbiometrics.model.StartViewModel
 
 @Composable
 fun StartScreen(
-    startViewModel: StartViewModel,
-    onReauthTap: () -> Unit
+    startViewModel: StartViewModel
 ) {
     val uiState by startViewModel.uiState.collectAsState()
 
     StartScreen(
         uiState = uiState,
-        onLoginTap = { startViewModel.doLogin() },
-        onReauthTap = onReauthTap
+        onLoginTap = { startViewModel.doLogin() }
     )
 }
 
 @Composable
 fun StartScreen(
     uiState: StartUiState,
-    onLoginTap: () -> Unit,
-    onReauthTap: () -> Unit
+    onLoginTap: () -> Unit
 ) {
     ConstraintLayout(
         modifier = Modifier
@@ -68,7 +66,7 @@ fun StartScreen(
 
             Button(
                 enabled = uiState.isReauthEnabled,
-                onClick = onReauthTap
+                onClick = { }
             ) {
                 Text(text = "Reauthenticate with Biometrics")
             }
@@ -81,7 +79,6 @@ fun StartScreen(
 fun PreviewStartScreen() {
     StartScreen(
         uiState = StartUiState(),
-        onLoginTap = {},
-        onReauthTap = {}
+        onLoginTap = {}
     )
 }
