@@ -1,7 +1,7 @@
 package com.oliverspryn.android.oauthbiometrics.ui
 
-import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,7 +15,7 @@ import com.oliverspryn.android.oauthbiometrics.ui.theme.OAuthBiometricsTheme
 
 @Composable
 fun OAuth(
-    activity: ComponentActivity
+    activity: FragmentActivity
 ) {
     val navController = rememberNavController()
 

@@ -1,6 +1,6 @@
 package com.oliverspryn.android.oauthbiometrics.model
 
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.TokenExchangeUseCase
@@ -27,7 +27,7 @@ class LoadingViewModel @Inject constructor(
         )
 
     fun performTokenExchange(
-        activity: ComponentActivity,
+        activity: FragmentActivity,
         notLoggingIn: () -> Unit,
         loginSuccess: () -> Unit
     ) {

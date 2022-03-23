@@ -1,6 +1,7 @@
 package com.oliverspryn.android.oauthbiometrics.domain.usecases
 
 import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.AuthorizationExceptionForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.AuthorizationResponseForwarder
 import com.oliverspryn.android.oauthbiometrics.domain.exceptions.TokenExchangeThrowable
@@ -18,7 +19,7 @@ class TokenExchangeUseCase @Inject constructor(
 ) {
 
     operator fun invoke(
-        activity: ComponentActivity,
+        activity: FragmentActivity,
         notLoggingIn: () -> Unit,
         loginSuccess: () -> Unit,
         loginError: (TokenExchangeThrowable) -> Unit

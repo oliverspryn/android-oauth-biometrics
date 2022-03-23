@@ -1,6 +1,5 @@
 package com.oliverspryn.android.oauthbiometrics.ui.loading
 
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.fragment.app.FragmentActivity
 import com.oliverspryn.android.oauthbiometrics.model.LoadingUiState
 import com.oliverspryn.android.oauthbiometrics.model.LoadingViewModel
 import com.oliverspryn.android.oauthbiometrics.ui.theme.OAuthBiometricsTheme
@@ -18,7 +18,7 @@ import com.oliverspryn.android.oauthbiometrics.utils.RunOnceEffect
 
 @Composable
 fun LoadingScreen(
-    activity: ComponentActivity,
+    activity: FragmentActivity,
     loadingViewModel: LoadingViewModel,
     notLoggingIn: () -> Unit,
     loginSuccess: () -> Unit
