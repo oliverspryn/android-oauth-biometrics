@@ -79,17 +79,20 @@ class CryptographyManager @Inject constructor(
     }
 
     private fun createSecretKey(): Key {
-        val keyGeneratorParametersBuilder = keyGenParameterSpecBuilderFactory.build(
-            keystoreAlias = NAME,
-            purposes = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-        )
+        val keyGeneratorParameters = keyGenParameterSpecBuilderFactory
+            .build(
+                keystoreAlias = NAME,
+                purposes = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            ).apply {
+                setBlockModes(BLOCK_MODE)
+                setEncryptionPaddings(PADDING)
+//                setInvalidatedByBiometricEnrollment(true) API 24
+                setKeySize(SIZE)
+                // https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUserAuthenticationRequired(boolean)
+                setUserAuthenticationRequired(true)
+            }
+            .build()
 
-        keyGeneratorParametersBuilder.setBlockModes(BLOCK_MODE)
-        keyGeneratorParametersBuilder.setEncryptionPaddings(PADDING)
-        keyGeneratorParametersBuilder.setKeySize(SIZE)
-        keyGeneratorParametersBuilder.setUserAuthenticationRequired(true)
-
-        val keyGeneratorParameters = keyGeneratorParametersBuilder.build()
         val keyGenerator = keyGeneratorForwarder.getInstance(ALGORITHM, KEY_STORE_NAME)
         keyGenerator.init(keyGeneratorParameters)
 
@@ -105,7 +108,11 @@ class CryptographyManager @Inject constructor(
         val keyStore = keyStoreForwarder.getInstance(KEY_STORE_NAME)
         keyStore.load(null) // Keystore must be loaded before it can be accessed
 
-        return keyStore.getKey(NAME, null) ?: createSecretKey()
+        return if (keyStore.containsAlias(NAME)) {
+            keyStore.getKey(NAME, null)
+        } else {
+            createSecretKey()
+        }
     }
 }
 

@@ -27,7 +27,11 @@ class AccountViewModel @Inject constructor(
     private val presentBiometricPromptForCipherUseCase: PresentBiometricPromptForCipherUseCase,
     strongestAvailableAuthenticationTypeUseCase: ObtainStrongestAvailableAuthenticationTypeUseCase
 ) : ViewModel() {
-    private val viewModelState = MutableStateFlow(AccountUiState())
+    private val viewModelState = MutableStateFlow(
+        AccountUiState(
+            isReauthenticationFeatureEnabled = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationType.Available
+        )
+    )
 
     val uiState = viewModelState
         .stateIn(
