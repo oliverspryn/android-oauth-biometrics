@@ -1,4 +1,4 @@
-package com.oliverspryn.android.oauthbiometrics.ui.start
+package com.oliverspryn.android.oauthbiometrics.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize

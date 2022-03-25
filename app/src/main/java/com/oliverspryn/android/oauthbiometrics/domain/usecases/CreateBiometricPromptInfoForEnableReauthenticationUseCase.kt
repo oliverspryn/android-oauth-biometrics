@@ -3,7 +3,7 @@ package com.oliverspryn.android.oauthbiometrics.domain.usecases
 import androidx.biometric.BiometricPrompt
 import javax.inject.Inject
 
-class CreateBiometricPromptInfoForLoginUseCase @Inject constructor(
+class CreateBiometricPromptInfoForEnableReauthenticationUseCase @Inject constructor(
     private val obtainStrongestAvailableAuthenticationTypeUseCase: ObtainStrongestAvailableAuthenticationTypeUseCase
 ) {
 
@@ -11,9 +11,9 @@ class CreateBiometricPromptInfoForLoginUseCase @Inject constructor(
         val promptRequestType = obtainStrongestAvailableAuthenticationTypeUseCase()
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Sign into the App")
+            .setTitle("Enable biometric login")
             .setSubtitle("Using biometrics")
-            .setDescription("You can use your fingerprint to sign back into the app")
+            .setDescription("Confirm your choice to enable a biometric login")
 
         if (promptRequestType is StrongestAvailableAuthenticationType.Available) {
             promptInfo.setAllowedAuthenticators(promptRequestType.authenticators)

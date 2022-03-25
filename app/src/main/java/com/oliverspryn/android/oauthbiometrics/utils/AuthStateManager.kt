@@ -1,7 +1,10 @@
 package com.oliverspryn.android.oauthbiometrics.utils
 
-import net.openid.appauth.*
-import java.lang.Exception
+import net.openid.appauth.AuthState
+import net.openid.appauth.AuthorizationException
+import net.openid.appauth.AuthorizationResponse
+import net.openid.appauth.AuthorizationServiceConfiguration
+import net.openid.appauth.TokenResponse
 import javax.inject.Inject
 
 class AuthStateManager @Inject constructor() {
@@ -10,9 +13,7 @@ class AuthStateManager @Inject constructor() {
         private var authState: AuthState? = null
     }
 
-    fun setAuthServiceConfiguration(serviceConfiguration: AuthorizationServiceConfiguration) {
-        authState = AuthState(serviceConfiguration)
-    }
+    fun getSerializedAuthState(): String? = authState?.jsonSerializeString()
 
     fun provideAuthorizationCode(
         response: AuthorizationResponse,
@@ -26,5 +27,9 @@ class AuthStateManager @Inject constructor() {
         exception: AuthorizationException?
     ) {
         authState?.update(response, exception)
+    }
+
+    fun setAuthServiceConfiguration(serviceConfiguration: AuthorizationServiceConfiguration) {
+        authState = AuthState(serviceConfiguration)
     }
 }

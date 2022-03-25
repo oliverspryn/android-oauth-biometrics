@@ -5,20 +5,22 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.crypto.Cipher
 import javax.inject.Inject
 
-class CreateBiometricPromptUseCase @Inject constructor(
+class PresentBiometricPromptForCipherUseCase @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
     operator fun invoke(
         activity: FragmentActivity,
+        promptInfo: BiometricPrompt.PromptInfo,
+        cipher: Cipher,
         onSuccess: (result: BiometricPrompt.AuthenticationResult) -> Unit,
         onFailed: () -> Unit,
         onError: (errorCode: Int, description: String) -> Unit
-    ): BiometricPrompt {
+    ) {
         val executor = ContextCompat.getMainExecutor(context)
-
         val callback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 super.onAuthenticationError(errorCode, errString)
@@ -36,6 +38,7 @@ class CreateBiometricPromptUseCase @Inject constructor(
             }
         }
 
-        return BiometricPrompt(activity, executor, callback)
+        val prompt = BiometricPrompt(activity, executor, callback)
+        prompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
     }
 }

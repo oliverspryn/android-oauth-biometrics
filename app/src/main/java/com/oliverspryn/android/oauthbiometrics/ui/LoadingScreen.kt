@@ -1,4 +1,4 @@
-package com.oliverspryn.android.oauthbiometrics.ui.loading
+package com.oliverspryn.android.oauthbiometrics.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

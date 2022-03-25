@@ -1,7 +1,6 @@
 package com.oliverspryn.android.oauthbiometrics.utils.security
 
 import android.security.keystore.KeyProperties
-import java.nio.charset.Charset
 
 object CryptographyConfig {
 
@@ -23,7 +22,6 @@ object CryptographyConfig {
         const val SIZE = 256
     }
 
-    val BYTE_ARRAY_ENCODING: Charset = Charset.forName("UTF-8")
-    const val KEY_STORE_NAME =
-        "com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.KEY_STORE_NAME"
+    val BYTE_ARRAY_ENCODING = Charsets.UTF_8
+    const val KEY_STORE_NAME = "AndroidKeyStore"
 }

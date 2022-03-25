@@ -6,11 +6,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.oliverspryn.android.oauthbiometrics.model.AccountViewModel
 import com.oliverspryn.android.oauthbiometrics.model.LoadingViewModel
 import com.oliverspryn.android.oauthbiometrics.model.StartViewModel
-import com.oliverspryn.android.oauthbiometrics.ui.account.AccountScreen
-import com.oliverspryn.android.oauthbiometrics.ui.loading.LoadingScreen
-import com.oliverspryn.android.oauthbiometrics.ui.start.StartScreen
 import com.oliverspryn.android.oauthbiometrics.ui.theme.OAuthBiometricsTheme
 
 @Composable
@@ -44,7 +42,12 @@ fun OAuth(
             }
 
             composable("account") {
-                AccountScreen()
+                val viewModel: AccountViewModel = hiltViewModel()
+
+                AccountScreen(
+                    accountViewModel = viewModel,
+                    activity = activity
+                )
             }
         }
     }

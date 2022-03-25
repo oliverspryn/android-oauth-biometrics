@@ -2,7 +2,11 @@ package com.oliverspryn.android.oauthbiometrics.utils.security
 
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import com.oliverspryn.android.oauthbiometrics.di.factories.*
+import com.oliverspryn.android.oauthbiometrics.di.factories.ByteArrayFactory
+import com.oliverspryn.android.oauthbiometrics.di.factories.IvParameterSpecFactory
+import com.oliverspryn.android.oauthbiometrics.di.factories.KeyGenParameterSpecBuilderFactory
+import com.oliverspryn.android.oauthbiometrics.di.factories.SecureRandomFactory
+import com.oliverspryn.android.oauthbiometrics.di.factories.StringFactory
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.CipherForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyGeneratorForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyStoreForwarder
@@ -62,7 +66,7 @@ class CryptographyManager @Inject constructor(
         val cipher = getCipher()
         val secretKey = getOrCreateSecretKey()
 
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, createIv(cipher.blockSize))
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         return cipher
     }
 
