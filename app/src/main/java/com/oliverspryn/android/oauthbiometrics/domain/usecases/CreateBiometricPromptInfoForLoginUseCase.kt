@@ -4,18 +4,18 @@ import androidx.biometric.BiometricPrompt
 import javax.inject.Inject
 
 class CreateBiometricPromptInfoForLoginUseCase @Inject constructor(
-    private val obtainStrongestAvailableAuthenticationTypeUseCase: ObtainStrongestAvailableAuthenticationTypeUseCase
+    private val obtainStrongestAvailableAuthenticationTypeForCryptographyUseCase: ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase
 ) {
 
     operator fun invoke(): BiometricPrompt.PromptInfo {
-        val promptRequestType = obtainStrongestAvailableAuthenticationTypeUseCase()
+        val promptRequestType = obtainStrongestAvailableAuthenticationTypeForCryptographyUseCase()
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Sign into the App")
             .setSubtitle("Using biometrics")
             .setDescription("You can use your fingerprint to sign back into the app")
 
-        if (promptRequestType is StrongestAvailableAuthenticationType.Available) {
+        if (promptRequestType is StrongestAvailableAuthenticationTypeForCryptography.Available) {
             promptInfo.setAllowedAuthenticators(promptRequestType.authenticators)
             promptInfo.setConfirmationRequired(true)
 

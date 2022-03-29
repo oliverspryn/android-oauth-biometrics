@@ -5,9 +5,11 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.CreateBiometricPromptInfoForEnableReauthenticationUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.ObtainStrongestAvailableAuthenticationTypeUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.EnrollDeviceSecurityUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.OpenAndroidSecuritySettingsUseCase
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.PresentBiometricPromptForCipherUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.StrongestAvailableAuthenticationType
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.StrongestAvailableAuthenticationTypeForCryptography
 import com.oliverspryn.android.oauthbiometrics.utils.AuthStateManager
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,12 +26,16 @@ class AccountViewModel @Inject constructor(
     private val authStateManager: AuthStateManager,
     private val createBiometricPromptInfoForEnableReauthenticationUseCase: CreateBiometricPromptInfoForEnableReauthenticationUseCase,
     private val cryptographyManager: CryptographyManager,
+    private val enrollDeviceSecurityUseCase: EnrollDeviceSecurityUseCase,
+    private val openAndroidSecuritySettingsUseCase: OpenAndroidSecuritySettingsUseCase,
     private val presentBiometricPromptForCipherUseCase: PresentBiometricPromptForCipherUseCase,
-    strongestAvailableAuthenticationTypeUseCase: ObtainStrongestAvailableAuthenticationTypeUseCase
+    private val strongestAvailableAuthenticationTypeUseCase: ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase
 ) : ViewModel() {
+
     private val viewModelState = MutableStateFlow(
         AccountUiState(
-            isReauthenticationFeatureEnabled = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationType.Available
+            isReauthenticationFeatureEnabled = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available,
+            userNeedsToRegisterDeviceSecurity = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
         )
     )
 
@@ -38,9 +44,43 @@ class AccountViewModel @Inject constructor(
             viewModelScope,
             SharingStarted.Eagerly,
             AccountUiState(
-                isReauthenticationFeatureEnabled = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationType.Available
+                isReauthenticationFeatureEnabled = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available,
+                userNeedsToRegisterDeviceSecurity = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
             )
         )
+
+    fun dismissDeviceEnrollmentDialog() {
+        viewModelState.update {
+            it.copy(
+                showDeviceSecurityEnrollmentDialog = false
+            )
+        }
+    }
+
+    fun enrollBiometrics() {
+        val canEnrollDirectly = enrollDeviceSecurityUseCase()
+
+        if (!canEnrollDirectly) {
+            viewModelState.update {
+                it.copy(
+                    showDeviceSecurityEnrollmentDialog = true
+                )
+            }
+        }
+    }
+
+    fun evaluateBiometricsState() {
+        viewModelState.update {
+            it.copy(
+                isReauthenticationFeatureEnabled = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available,
+                userNeedsToRegisterDeviceSecurity = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
+            )
+        }
+    }
+
+    fun goToAndroidSecuritySettings() {
+        openAndroidSecuritySettingsUseCase()
+    }
 
     fun setReauthenticationFeatureEnabled(isEnabled: Boolean, activity: FragmentActivity) {
         if (!isEnabled) {
@@ -81,5 +121,7 @@ class AccountViewModel @Inject constructor(
 
 data class AccountUiState(
     val isReauthenticationFeatureEnabled: Boolean = true,
-    val isReauthenticationOptionChecked: Boolean = false
+    val isReauthenticationOptionChecked: Boolean = false,
+    val showDeviceSecurityEnrollmentDialog: Boolean = false,
+    val userNeedsToRegisterDeviceSecurity: Boolean = false
 )

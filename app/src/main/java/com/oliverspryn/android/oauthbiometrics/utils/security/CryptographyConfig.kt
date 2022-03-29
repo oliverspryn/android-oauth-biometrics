@@ -12,7 +12,7 @@ object CryptographyConfig {
     object Encryption {
         const val ALGORITHM = KeyProperties.KEY_ALGORITHM_AES
         const val BLOCK_MODE = KeyProperties.BLOCK_MODE_CBC
-        const val PADDING = KeyProperties.ENCRYPTION_PADDING_NONE
+        const val PADDING = KeyProperties.ENCRYPTION_PADDING_PKCS7
     }
 
     object Key {

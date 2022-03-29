@@ -4,7 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Switch
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,9 +24,16 @@ fun AccountScreen(
     activity: FragmentActivity
 ) {
     val uiState by accountViewModel.uiState.collectAsState()
+    accountViewModel.evaluateBiometricsState()
 
     AccountScreen(
         uiState = uiState,
+        onDeviceEnrollmentConfirmed = {
+            accountViewModel.dismissDeviceEnrollmentDialog()
+            accountViewModel.goToAndroidSecuritySettings()
+        },
+        onDeviceEnrollmentDismissed = { accountViewModel.dismissDeviceEnrollmentDialog() },
+        onEnrollBiometricsTap = { accountViewModel.enrollBiometrics() },
         onReauthenticationEnabled = { isEnabled ->
             accountViewModel.setReauthenticationFeatureEnabled(
                 isEnabled,
@@ -35,6 +46,9 @@ fun AccountScreen(
 @Composable
 fun AccountScreen(
     uiState: AccountUiState,
+    onDeviceEnrollmentConfirmed: () -> Unit,
+    onDeviceEnrollmentDismissed: () -> Unit,
+    onEnrollBiometricsTap: () -> Unit,
     onReauthenticationEnabled: (Boolean) -> Unit
 ) {
     Column(
@@ -42,12 +56,67 @@ fun AccountScreen(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize()
     ) {
-        Text(text = "Logged in!")
+        Text(
+            text = "Logged in!",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground
+        )
 
         Switch(
             checked = uiState.isReauthenticationOptionChecked,
             enabled = uiState.isReauthenticationFeatureEnabled,
             onCheckedChange = onReauthenticationEnabled
         )
+
+        if (uiState.userNeedsToRegisterDeviceSecurity) {
+            Text(
+                text = "You don't have any device security enabled",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Button(
+                onClick = onEnrollBiometricsTap
+            ) {
+                Text(text = "Enroll Biometrics")
+            }
+        }
     }
+
+    if (uiState.showDeviceSecurityEnrollmentDialog) {
+        DeviceSecurityEnrollmentDialog(
+            onDeviceEnrollmentConfirmed = onDeviceEnrollmentConfirmed,
+            onDeviceEnrollmentDismissed = onDeviceEnrollmentDismissed
+        )
+    }
+}
+
+@Composable
+private fun DeviceSecurityEnrollmentDialog(
+    onDeviceEnrollmentConfirmed: () -> Unit,
+    onDeviceEnrollmentDismissed: () -> Unit
+) {
+    AlertDialog(
+        title = {
+            Text(text = "Device Security")
+        },
+        text = {
+            Text(text = "You need to enable device security before saving your login information.")
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onDeviceEnrollmentConfirmed
+            ) {
+                Text("Enable Now")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDeviceEnrollmentDismissed
+            ) {
+                Text("Dismiss")
+            }
+        },
+        onDismissRequest = onDeviceEnrollmentDismissed
+    )
 }

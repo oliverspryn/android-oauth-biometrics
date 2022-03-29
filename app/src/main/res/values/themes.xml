@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- region Platform Theme -->
 
-    <style name="Theme.OAuthBiometrics" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Platform.V23.Theme.OAuthBiometrics" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Platform.Theme.OAuthBiometrics" parent="Platform.V23.Theme.OAuthBiometrics" />
+
+    <!-- endregion -->
+
+    <!-- region Base Theme -->
+
+    <style name="Base.Theme.OAuthBiometrics" parent="Platform.Theme.OAuthBiometrics" />
+
+    <!-- endregion -->
+
+    <!-- region App Theme -->
+
+    <style name="Theme.OAuthBiometrics" parent="Base.Theme.OAuthBiometrics" />
+
+    <!-- endregion -->
 </resources>

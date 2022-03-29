@@ -7,6 +7,12 @@ import javax.inject.Inject
 class IntentFactory @Inject constructor() {
 
     fun newInstance(
+        action: String
+    ) = Intent(
+        action
+    )
+
+    fun newInstance(
         packageContext: Context,
         cls: Class<*>
     ) = Intent(
