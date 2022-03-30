@@ -28,14 +28,14 @@ class LoadingViewModel @Inject constructor(
 
     fun performTokenExchange(
         activity: FragmentActivity,
-        notLoggingIn: () -> Unit,
-        loginSuccess: () -> Unit
+        onNotLoggingIn: () -> Unit,
+        onLoginSuccess: () -> Unit
     ) {
         tokenExchangeUseCase(
             activity = activity,
-            notLoggingIn = notLoggingIn,
-            loginSuccess = loginSuccess,
-            loginError = { updateMessageWithError(it.message) }
+            onNotLoggingIn = onNotLoggingIn,
+            onLoginSuccess = onLoginSuccess,
+            onLoginError = { updateMessageWithError(it.message) }
         )
     }
 

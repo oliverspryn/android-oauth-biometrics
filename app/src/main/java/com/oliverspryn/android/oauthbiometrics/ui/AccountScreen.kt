@@ -28,28 +28,28 @@ fun AccountScreen(
 
     AccountScreen(
         uiState = uiState,
+        onBiometricLoginEnabled = { isEnabled ->
+            accountViewModel.setBiometricLoginFeatureEnabled(
+                isEnabled,
+                activity
+            )
+        },
         onDeviceEnrollmentConfirmed = {
             accountViewModel.dismissDeviceEnrollmentDialog()
             accountViewModel.goToAndroidSecuritySettings()
         },
         onDeviceEnrollmentDismissed = { accountViewModel.dismissDeviceEnrollmentDialog() },
-        onEnrollBiometricsTap = { accountViewModel.enrollBiometrics() },
-        onReauthenticationEnabled = { isEnabled ->
-            accountViewModel.setReauthenticationFeatureEnabled(
-                isEnabled,
-                activity
-            )
-        }
+        onEnrollBiometricsTap = { accountViewModel.enrollBiometrics() }
     )
 }
 
 @Composable
 fun AccountScreen(
     uiState: AccountUiState,
+    onBiometricLoginEnabled: (Boolean) -> Unit,
     onDeviceEnrollmentConfirmed: () -> Unit,
     onDeviceEnrollmentDismissed: () -> Unit,
-    onEnrollBiometricsTap: () -> Unit,
-    onReauthenticationEnabled: (Boolean) -> Unit
+    onEnrollBiometricsTap: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -63,9 +63,9 @@ fun AccountScreen(
         )
 
         Switch(
-            checked = uiState.isReauthenticationOptionChecked,
-            enabled = uiState.isReauthenticationFeatureEnabled,
-            onCheckedChange = onReauthenticationEnabled
+            checked = uiState.isBiometricLoginOptionChecked,
+            enabled = uiState.isBiometricLoginFeatureAvailable,
+            onCheckedChange = onBiometricLoginEnabled
         )
 
         if (uiState.userNeedsToRegisterDeviceSecurity) {

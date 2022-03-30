@@ -13,25 +13,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.fragment.app.FragmentActivity
 import com.oliverspryn.android.oauthbiometrics.model.StartUiState
 import com.oliverspryn.android.oauthbiometrics.model.StartViewModel
 
 @Composable
 fun StartScreen(
-    startViewModel: StartViewModel
+    activity: FragmentActivity,
+    startViewModel: StartViewModel,
+    onLoginSuccess: () -> Unit
 ) {
     val uiState by startViewModel.uiState.collectAsState()
 
     StartScreen(
         uiState = uiState,
-        onLoginTap = { startViewModel.doLogin() }
+        onBiometricLoginTap = { startViewModel.doBiometricLogin(activity, onLoginSuccess) },
+        onWebLoginTap = { startViewModel.doWebLogin() }
     )
 }
 
 @Composable
 fun StartScreen(
     uiState: StartUiState,
-    onLoginTap: () -> Unit
+    onBiometricLoginTap: () -> Unit,
+    onWebLoginTap: () -> Unit
 ) {
     ConstraintLayout(
         modifier = Modifier
@@ -58,17 +63,17 @@ fun StartScreen(
             }
         ) {
             Button(
-                enabled = !uiState.isLoading,
-                onClick = onLoginTap
+                enabled = uiState.isWebLoginEnabled,
+                onClick = onWebLoginTap
             ) {
-                Text(text = "Login")
+                Text(text = "Login with Web")
             }
 
             Button(
-                enabled = uiState.isReauthEnabled,
-                onClick = { }
+                enabled = uiState.isBiometricLoginEnabled,
+                onClick = onBiometricLoginTap
             ) {
-                Text(text = "Reauthenticate with Biometrics")
+                Text(text = "Login with Biometrics")
             }
         }
     }
@@ -79,6 +84,7 @@ fun StartScreen(
 fun PreviewStartScreen() {
     StartScreen(
         uiState = StartUiState(),
-        onLoginTap = {}
+        onBiometricLoginTap = {},
+        onWebLoginTap = {}
     )
 }

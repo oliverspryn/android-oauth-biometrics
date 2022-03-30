@@ -20,16 +20,16 @@ import com.oliverspryn.android.oauthbiometrics.utils.RunOnceEffect
 fun LoadingScreen(
     activity: FragmentActivity,
     loadingViewModel: LoadingViewModel,
-    notLoggingIn: () -> Unit,
-    loginSuccess: () -> Unit
+    onNotLoggingIn: () -> Unit,
+    onLoginSuccess: () -> Unit
 ) {
     val uiState by loadingViewModel.uiState.collectAsState()
 
     RunOnceEffect {
         loadingViewModel.performTokenExchange(
             activity = activity,
-            notLoggingIn = notLoggingIn,
-            loginSuccess = loginSuccess
+            onNotLoggingIn = onNotLoggingIn,
+            onLoginSuccess = onLoginSuccess
         )
     }
 

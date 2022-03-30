@@ -10,6 +10,7 @@ import com.oliverspryn.android.oauthbiometrics.model.AccountViewModel
 import com.oliverspryn.android.oauthbiometrics.model.LoadingViewModel
 import com.oliverspryn.android.oauthbiometrics.model.StartViewModel
 import com.oliverspryn.android.oauthbiometrics.ui.theme.OAuthBiometricsTheme
+import com.oliverspryn.android.oauthbiometrics.utils.ext.navigateAndClearBackStack
 
 @Composable
 fun OAuth(
@@ -28,8 +29,8 @@ fun OAuth(
                 LoadingScreen(
                     activity = activity,
                     loadingViewModel = viewModel,
-                    notLoggingIn = { navController.navigate("start") },
-                    loginSuccess = { navController.navigate("account") }
+                    onNotLoggingIn = { navController.navigateAndClearBackStack("start") },
+                    onLoginSuccess = { navController.navigateAndClearBackStack("account") }
                 )
             }
 
@@ -37,7 +38,9 @@ fun OAuth(
                 val viewModel: StartViewModel = hiltViewModel()
 
                 StartScreen(
-                    startViewModel = viewModel
+                    activity = activity,
+                    startViewModel = viewModel,
+                    onLoginSuccess = { navController.navigateAndClearBackStack("account") }
                 )
             }
 

@@ -80,9 +80,6 @@ sealed interface StrongestAvailableAuthenticationTypeForCryptography {
     data class Available(val authenticators: Int) : StrongestAvailableAuthenticationTypeForCryptography {
         val allowsDeviceCredentials: Boolean
             get() = authenticators and DEVICE_CREDENTIAL != 0
-
-        val hasBiometricSupport: Boolean
-            get() = authenticators and (BIOMETRIC_STRONG or BIOMETRIC_WEAK) != 0
     }
 
     object InsecureHardware : StrongestAvailableAuthenticationTypeForCryptography

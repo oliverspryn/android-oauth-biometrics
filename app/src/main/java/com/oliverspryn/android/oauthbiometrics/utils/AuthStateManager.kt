@@ -13,7 +13,15 @@ class AuthStateManager @Inject constructor() {
         private var authState: AuthState? = null
     }
 
-    fun getSerializedAuthState(): String? = authState?.jsonSerializeString()
+    var serializedAuthState: String?
+        get() = authState?.jsonSerializeString()
+        set(value) {
+            authState = if (value != null) {
+                AuthState.jsonDeserialize(value)
+            } else {
+                AuthState()
+            }
+        }
 
     fun provideAuthorizationCode(
         response: AuthorizationResponse,

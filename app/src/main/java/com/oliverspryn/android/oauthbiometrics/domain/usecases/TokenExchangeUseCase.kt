@@ -20,21 +20,21 @@ class TokenExchangeUseCase @Inject constructor(
 
     operator fun invoke(
         activity: FragmentActivity,
-        notLoggingIn: () -> Unit,
-        loginSuccess: () -> Unit,
-        loginError: (TokenExchangeThrowable) -> Unit
+        onNotLoggingIn: () -> Unit,
+        onLoginSuccess: () -> Unit,
+        onLoginError: (TokenExchangeThrowable) -> Unit
     ) {
         val authCodeResponse = authResponseForwarder.fromIntent(activity.intent)
         val authCodeException = authExceptionForwarder.fromIntent(activity.intent)
 
         if (authCodeException != null) {
-            loginError(TokenExchangeThrowable.AuthorizationCodeError(authCodeException))
+            onLoginError(TokenExchangeThrowable.AuthorizationCodeError(authCodeException))
             activity.clearIntent()
             return
         }
 
         if (authCodeResponse == null) {
-            notLoggingIn()
+            onNotLoggingIn()
             return
         }
 
@@ -44,19 +44,19 @@ class TokenExchangeUseCase @Inject constructor(
             authCodeResponse.createTokenExchangeRequest()
         ) { tokenResponse, tokenException ->
             if (tokenException != null) {
-                loginError(TokenExchangeThrowable.TokenExchangeError(tokenException))
+                onLoginError(TokenExchangeThrowable.TokenExchangeError(tokenException))
                 activity.clearIntent()
                 return@performTokenRequest
             }
 
             if (tokenResponse == null) {
-                loginError(TokenExchangeThrowable.NoToken)
+                onLoginError(TokenExchangeThrowable.NoToken)
                 activity.clearIntent()
                 return@performTokenRequest
             }
 
             authStateManager.provideTokens(tokenResponse, tokenException)
-            loginSuccess()
+            onLoginSuccess()
             activity.clearIntent()
         }
     }
