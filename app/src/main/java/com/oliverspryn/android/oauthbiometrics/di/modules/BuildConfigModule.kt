@@ -20,6 +20,9 @@ class BuildConfigModule {
 
         const val OAUTH_LOGIN_REDIRECT_URI =
             "com.oliverspryn.android.oauthbiometrics.di.modules.BuildConfigModule.OAUTH_LOGIN_REDIRECT_URI"
+
+        const val OAUTH_LOGOUT_REDIRECT_URI =
+            "com.oliverspryn.android.oauthbiometrics.di.modules.BuildConfigModule.OAUTH_LOGOUT_REDIRECT_URI"
     }
 
     @Provides
@@ -29,6 +32,10 @@ class BuildConfigModule {
     @Provides
     @Named(OAUTH_LOGIN_REDIRECT_URI)
     fun provideOAuthLoginRedirectUri(): String = BuildConfig.OAUTH_LOGIN_REDIRECT_URI
+
+    @Provides
+    @Named(OAUTH_LOGOUT_REDIRECT_URI)
+    fun provideOAuthLogoutRedirectUri(): String = BuildConfig.OAUTH_LOGOUT_REDIRECT_URI
 
     @Provides
     @Named(OPENID_CONFIG_URL)
