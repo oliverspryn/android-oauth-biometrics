@@ -10,16 +10,18 @@ import com.oliverspryn.android.oauthbiometrics.MainActivity
 import com.oliverspryn.android.oauthbiometrics.data.AuthZeroRepository
 import com.oliverspryn.android.oauthbiometrics.di.factories.IntentFactory
 import com.oliverspryn.android.oauthbiometrics.di.factories.RxJavaFactory
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.CreateBiometricPromptInfoForEnableBiometricLoginUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.DidHandleLogoutRedirect
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.EnrollDeviceSecurityUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.HasBiometricLoginEnabledUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.LogoutUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.OpenAndroidSecuritySettingsUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.PresentBiometricPromptForCipherUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.StorePersistentAuthStateUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.StrongestAvailableAuthenticationTypeForCryptography
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.BiometricResult
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.CreateBiometricPromptInfoForEnableBiometricLoginUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.EnrollDeviceSecurityUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.OpenAndroidSecuritySettingsUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.PresentBiometricPromptForCipherUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.StrongestAvailableAuthenticationTypeForCryptography
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth.DidHandleLogoutWithOAuthRedirect
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.DeletePersistentAuthStateUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.HasBiometricLoginEnabledUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.LogoutUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.StorePersistentAuthStateUseCase
 import com.oliverspryn.android.oauthbiometrics.utils.AuthStateManager
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,6 +37,7 @@ class AccountViewModel @Inject constructor(
     private val authZeroRepository: AuthZeroRepository,
     private val createBiometricPromptInfoForEnableBiometricLoginUseCase: CreateBiometricPromptInfoForEnableBiometricLoginUseCase,
     private val cryptographyManager: CryptographyManager,
+    private val deletePersistentAuthStateUseCase: DeletePersistentAuthStateUseCase,
     private val enrollDeviceSecurityUseCase: EnrollDeviceSecurityUseCase,
     private val hasBiometricLoginEnabledUseCase: HasBiometricLoginEnabledUseCase,
     private val intentFactory: IntentFactory,
@@ -80,33 +83,29 @@ class AccountViewModel @Inject constructor(
         }
     }
 
-    fun evaluateBiometricsState() {
-        viewModelState.update {
-            it.copy(
-                isBiometricLoginFeatureAvailable = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available,
-                userNeedsToRegisterDeviceSecurity = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
-            )
-        }
-    }
-
     fun goToAndroidSecuritySettings() {
         openAndroidSecuritySettingsUseCase()
     }
 
     fun logout(context: Context) {
-        val outcome = logoutUseCase()
+        val restartActivity = intentFactory
+            .newInstance(context, MainActivity::class.java)
+            .apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_NO_ANIMATION
+            }
 
-        if (outcome is DidHandleLogoutRedirect.No) {
-            val restartActivity = intentFactory
-                .newInstance(context, MainActivity::class.java)
-                .apply {
-                    flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or
-                            Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_NO_ANIMATION
+        logoutUseCase()
+            .subscribeOn(rxJavaFactory.io)
+            .observeOn(rxJavaFactory.ui)
+            .subscribe({ outcome ->
+                if (outcome is DidHandleLogoutWithOAuthRedirect.No) {
+                    context.startActivity(restartActivity)
                 }
-
-            context.startActivity(restartActivity)
-        }
+            }, {
+                context.startActivity(restartActivity)
+            })
     }
 
     fun setBiometricLoginFeatureEnabled(isEnabled: Boolean, activity: FragmentActivity) {
@@ -121,38 +120,69 @@ class AccountViewModel @Inject constructor(
         presentBiometricPromptForCipherUseCase(
             activity = activity,
             promptInfo = promptInfo,
-            cipher = cipher,
-            onSuccess = { result -> enableBiometricLogin(result) },
-            onFailed = { disableBiometricLogin() },
-            onError = { _, _ -> disableBiometricLogin() }
-        )
+            cipher = cipher
+        ).subscribe({ biometricOutcome ->
+            if (biometricOutcome is BiometricResult.Success) {
+                enableBiometricLogin(biometricOutcome.result)
+            }
+
+            // Alternative is something like a bad fingerprint
+            // Do nothing, in that case
+            // Not an error yet
+        }, { error ->
+            if (error is BiometricResult.Error && error.isBiometricLockout) {
+                disableBiometricLogin()
+            }
+        }, {
+            // Biometric success, handled with the data provided in onNext()
+        })
+    }
+
+    fun updateBiometricsOption() {
+        viewModelState.update {
+            it.copy(
+                isBiometricLoginFeatureAvailable = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available,
+                userNeedsToRegisterDeviceSecurity = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
+            )
+        }
     }
 
     private fun checkBiometricLoginState() {
-        hasBiometricLoginEnabledUseCase(
-            isEnabled = { enabled ->
+        hasBiometricLoginEnabledUseCase()
+            .subscribeOn(rxJavaFactory.io)
+            .observeOn(rxJavaFactory.ui)
+            .subscribe({ isEnabled ->
                 viewModelState.update {
                     it.copy(
                         isBiometricLoginFeatureAvailable = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available,
-                        isBiometricLoginOptionChecked = enabled,
+                        isBiometricLoginOptionChecked = isEnabled,
                         userNeedsToRegisterDeviceSecurity = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
                     )
                 }
-            }
-        )
+            }, {
+                viewModelState.update {
+                    it.copy(
+                        isBiometricLoginFeatureAvailable = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available,
+                        isBiometricLoginOptionChecked = false,
+                        userNeedsToRegisterDeviceSecurity = strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
+                    )
+                }
+            })
     }
 
     private fun disableBiometricLogin() {
-        storePersistentAuthStateUseCase(
-            isEnabled = false,
-            serializedAuthState = null,
-            onComplete = {
+        deletePersistentAuthStateUseCase()
+            .subscribeOn(rxJavaFactory.io)
+            .observeOn(rxJavaFactory.ui)
+            .subscribe({
                 viewModelState.update {
                     it.copy(isBiometricLoginOptionChecked = false)
                 }
-            },
-            onError = { }
-        )
+            }, {
+                viewModelState.update {
+                    it.copy(isBiometricLoginOptionChecked = false)
+                }
+            })
     }
 
     private fun enableBiometricLogin(result: BiometricPrompt.AuthenticationResult) {
@@ -160,16 +190,18 @@ class AccountViewModel @Inject constructor(
         val cipher = result.cryptoObject?.cipher ?: return
         val data = cryptographyManager.encryptData(authState, cipher)
 
-        storePersistentAuthStateUseCase(
-            isEnabled = true,
-            serializedAuthState = data.toString(),
-            onComplete = {
+        storePersistentAuthStateUseCase(data.toString())
+            .subscribeOn(rxJavaFactory.io)
+            .observeOn(rxJavaFactory.ui)
+            .subscribe({
                 viewModelState.update {
                     it.copy(isBiometricLoginOptionChecked = true)
                 }
-            },
-            onError = { }
-        )
+            }, {
+                viewModelState.update {
+                    it.copy(isBiometricLoginOptionChecked = false)
+                }
+            })
     }
 
     private fun getUserInfo() {

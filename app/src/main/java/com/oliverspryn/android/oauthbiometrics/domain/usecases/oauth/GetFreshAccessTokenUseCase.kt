@@ -1,6 +1,6 @@
-package com.oliverspryn.android.oauthbiometrics.domain.usecases
+package com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth
 
-import com.oliverspryn.android.oauthbiometrics.domain.exceptions.NoAccessTokenProvidedInResponse
+import com.oliverspryn.android.oauthbiometrics.domain.exceptions.oauth.NoAccessTokenProvidedInResponse
 import com.oliverspryn.android.oauthbiometrics.utils.AuthStateManager
 import io.reactivex.rxjava3.core.Single
 import net.openid.appauth.AuthorizationService

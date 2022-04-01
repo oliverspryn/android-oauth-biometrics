@@ -3,7 +3,8 @@ package com.oliverspryn.android.oauthbiometrics.model
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.TokenExchangeUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth.TokenExchangeOutcome
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth.TokenExchangeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,12 +32,17 @@ class LoadingViewModel @Inject constructor(
         onNotLoggingIn: () -> Unit,
         onLoginSuccess: () -> Unit
     ) {
-        tokenExchangeUseCase(
-            activity = activity,
-            onNotLoggingIn = onNotLoggingIn,
-            onLoginSuccess = onLoginSuccess,
-            onLoginError = { updateMessageWithError(it.message) }
-        )
+        tokenExchangeUseCase(activity)
+            .subscribe({ outcome ->
+                if (outcome is TokenExchangeOutcome.LoginSuccess) {
+                    onLoginSuccess()
+                } else if (outcome is TokenExchangeOutcome.NotLoggingIn) {
+                    onNotLoggingIn()
+                }
+
+            }, { error ->
+                updateMessageWithError(error.message)
+            })
     }
 
     private fun updateMessageWithError(message: String?) {

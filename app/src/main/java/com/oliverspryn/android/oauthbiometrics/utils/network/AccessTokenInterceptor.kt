@@ -4,20 +4,20 @@ import android.content.Context
 import android.content.Intent
 import com.oliverspryn.android.oauthbiometrics.MainActivity
 import com.oliverspryn.android.oauthbiometrics.di.factories.IntentFactory
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.DeletePersistentAuthStateUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.GetFreshAccessTokenUseCase
-import com.oliverspryn.android.oauthbiometrics.utils.AuthStateManager
+import com.oliverspryn.android.oauthbiometrics.di.factories.RxJavaFactory
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth.GetFreshAccessTokenUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.LogoutUseCase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
 
 class AccessTokenInterceptor @Inject constructor(
-    private val authStateManager: AuthStateManager,
     @ApplicationContext private val context: Context,
-    private val deletePersistentAuthStateUseCase: DeletePersistentAuthStateUseCase,
     private val getFreshAccessTokenUseCase: GetFreshAccessTokenUseCase,
-    private val intentFactory: IntentFactory
+    private val intentFactory: IntentFactory,
+    private val logoutUseCase: LogoutUseCase,
+    private val rxJavaFactory: RxJavaFactory
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -57,12 +57,6 @@ class AccessTokenInterceptor @Inject constructor(
     }
 
     private fun handleError() {
-        authStateManager.clearAuthState()
-        deletePersistentAuthStateUseCase(
-            onComplete = { },
-            onError = { /* Oh well, we tried */ }
-        )
-
         val restartActivity = intentFactory
             .newInstance(context, MainActivity::class.java)
             .apply {
@@ -71,7 +65,16 @@ class AccessTokenInterceptor @Inject constructor(
                         Intent.FLAG_ACTIVITY_NO_ANIMATION
             }
 
-        context.startActivity(restartActivity)
+        // Network operation already on background thread
+        // Jump to UI for navigation
+        logoutUseCase(false)
+            .observeOn(rxJavaFactory.ui)
+            .subscribe({
+                // Did not use the OAuth logout, since the token was already shot
+                context.startActivity(restartActivity)
+            }, {
+                context.startActivity(restartActivity)
+            })
     }
 }
 

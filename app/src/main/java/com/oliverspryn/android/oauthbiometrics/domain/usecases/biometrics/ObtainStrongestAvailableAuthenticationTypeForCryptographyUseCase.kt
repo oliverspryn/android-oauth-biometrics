@@ -1,4 +1,4 @@
-package com.oliverspryn.android.oauthbiometrics.domain.usecases
+package com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics
 
 import android.content.Context
 import android.os.Build
@@ -77,7 +77,8 @@ class ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase @Inject c
 }
 
 sealed interface StrongestAvailableAuthenticationTypeForCryptography {
-    data class Available(val authenticators: Int) : StrongestAvailableAuthenticationTypeForCryptography {
+    data class Available(val authenticators: Int) :
+        StrongestAvailableAuthenticationTypeForCryptography {
         val allowsDeviceCredentials: Boolean
             get() = authenticators and DEVICE_CREDENTIAL != 0
     }

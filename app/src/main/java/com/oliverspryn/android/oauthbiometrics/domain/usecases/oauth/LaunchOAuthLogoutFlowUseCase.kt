@@ -1,4 +1,4 @@
-package com.oliverspryn.android.oauthbiometrics.domain.usecases
+package com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
@@ -30,24 +30,24 @@ class LaunchOAuthLogoutFlowUseCase @Inject constructor(
 ) {
 
     companion object {
-        const val LOGIN_FAILED =
-            "com.oliverspryn.android.oauthbiometrics.domain.usecases.LaunchOAuthLogoutFlowUseCase.LOGOUT_FAILED"
+        const val LOGOUT_FAILED =
+            "com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth.LaunchOAuthLogoutFlowUseCase.LOGOUT_FAILED"
 
         const val REQUEST_CODE = 14530
     }
 
-    operator fun invoke(): DidHandleLogoutRedirect {
+    operator fun invoke(): DidHandleLogoutWithOAuthRedirect {
         val authServiceConfig = authStateManager.authServiceConfiguration
-            ?: return DidHandleLogoutRedirect.No
+            ?: return DidHandleLogoutWithOAuthRedirect.No
 
         val idToken = authStateManager.idToken
-            ?: return DidHandleLogoutRedirect.No
+            ?: return DidHandleLogoutWithOAuthRedirect.No
 
         val logoutRedirectUri = uriForwarder.parse(redirectUri)
 
         // IDP did not provide an end session URL
         if (authServiceConfig.endSessionEndpoint == null) {
-            return DidHandleLogoutRedirect.No
+            return DidHandleLogoutWithOAuthRedirect.No
         }
 
         val endSessionRequest = EndSessionRequest
@@ -59,7 +59,7 @@ class LaunchOAuthLogoutFlowUseCase @Inject constructor(
             .build()
 
         openBrowserForLogout(endSessionRequest)
-        return DidHandleLogoutRedirect.Yes
+        return DidHandleLogoutWithOAuthRedirect.Yes
     }
 
     @SuppressLint("InlinedApi") // Lint tool doesn't know I checked properly
@@ -73,7 +73,7 @@ class LaunchOAuthLogoutFlowUseCase @Inject constructor(
 
         val canceledIntent = intentFactory.newInstance(context, MainActivity::class.java)
         val completedIntent = intentFactory.newInstance(context, MainActivity::class.java)
-        canceledIntent.putExtra(LOGIN_FAILED, true)
+        canceledIntent.putExtra(LOGOUT_FAILED, true)
         canceledIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
 
         val canceledPendingIntent = pendingIntentForwarder.getActivity(
@@ -98,7 +98,7 @@ class LaunchOAuthLogoutFlowUseCase @Inject constructor(
     }
 }
 
-sealed interface DidHandleLogoutRedirect {
-    object No : DidHandleLogoutRedirect
-    object Yes : DidHandleLogoutRedirect
+sealed interface DidHandleLogoutWithOAuthRedirect {
+    object No : DidHandleLogoutWithOAuthRedirect
+    object Yes : DidHandleLogoutWithOAuthRedirect
 }

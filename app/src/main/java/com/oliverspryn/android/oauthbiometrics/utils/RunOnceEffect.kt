@@ -1,6 +1,8 @@
 package com.oliverspryn.android.oauthbiometrics.utils
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.NonRestartableComposable
 import kotlinx.coroutines.CoroutineScope
 
 @Composable

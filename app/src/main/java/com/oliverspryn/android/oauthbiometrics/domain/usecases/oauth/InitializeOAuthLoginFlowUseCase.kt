@@ -1,10 +1,10 @@
-package com.oliverspryn.android.oauthbiometrics.domain.usecases
+package com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth
 
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.AuthorizationRequestBuilderForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.AuthorizationServiceConfigurationForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.UriForwarder
 import com.oliverspryn.android.oauthbiometrics.di.modules.BuildConfigModule
-import com.oliverspryn.android.oauthbiometrics.domain.exceptions.AuthorizationServiceCouldNotBeConfigured
+import com.oliverspryn.android.oauthbiometrics.domain.exceptions.oauth.AuthorizationServiceCouldNotBeConfigured
 import com.oliverspryn.android.oauthbiometrics.utils.AuthStateManager
 import io.reactivex.rxjava3.core.Single
 import net.openid.appauth.AuthorizationRequest
@@ -64,17 +64,4 @@ class InitializeOAuthLoginFlowUseCase @Inject constructor(
             "email"           // Per: https://auth0.com/docs/api/authentication#user-profile
         )
         .build()
-
-//    private fun warmUpBrowser(callChain: RequestCallChain): WarmUpCallChain {
-//        val authService = authServiceFactory.newInstance(context)
-//        val intentBuilder = authService.createCustomTabsIntentBuilder(
-//            callChain.authRequest.toUri()
-//        )
-//
-//        return WarmUpCallChain(
-//            authRequest = callChain.authRequest,
-//            authState = callChain.authState,
-//            browserIntent = intentBuilder.build()
-//        )
-//    }
 }

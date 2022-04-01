@@ -1,4 +1,4 @@
-package com.oliverspryn.android.oauthbiometrics.domain.exceptions
+package com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography
 
 import android.security.keystore.KeyPermanentlyInvalidatedException
 

@@ -1,4 +1,4 @@
-package com.oliverspryn.android.oauthbiometrics.domain.usecases
+package com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
@@ -25,7 +25,7 @@ class LaunchOAuthLoginFlowUseCase @Inject constructor(
 
     companion object {
         const val LOGIN_FAILED =
-            "com.oliverspryn.android.oauthbiometrics.domain.usecases.LaunchOAuthLoginFlowUseCase.LOGIN_FAILED"
+            "com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth.LaunchOAuthLoginFlowUseCase.LOGIN_FAILED"
 
         const val REQUEST_CODE = 14529
     }

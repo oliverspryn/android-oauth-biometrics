@@ -1,4 +1,4 @@
-package com.oliverspryn.android.oauthbiometrics.domain.usecases
+package com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics
 
 import androidx.biometric.BiometricPrompt
 import javax.inject.Inject

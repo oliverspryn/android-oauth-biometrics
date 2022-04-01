@@ -14,7 +14,7 @@ import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyGenParameterSpec
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyGeneratorForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyStoreForwarder
 import com.oliverspryn.android.oauthbiometrics.di.modules.BuildModule
-import com.oliverspryn.android.oauthbiometrics.domain.exceptions.UnableToInitializeCipher
+import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToInitializeCipher
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.BYTE_ARRAY_ENCODING
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.Base64.DELIMITER
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.Base64.ENCODING

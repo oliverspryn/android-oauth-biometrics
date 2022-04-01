@@ -52,7 +52,7 @@ fun LoadingScreen(
     uiState: LoadingUiState,
     onRestartFlow: () -> Unit
 ) {
-    if (!uiState.message.isNullOrEmpty()) {
+    if (uiState.message.isNotEmpty()) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
