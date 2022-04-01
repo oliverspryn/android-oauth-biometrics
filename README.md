@@ -2,6 +2,17 @@
 
 🔐 A proof-of-concept application to log into an example Auth0 instance with a PKCE flow and allow secure retrieval of the access and refresh tokens with biometrics
 
+<img src=".docs/demo.gif" alt="Login, reauthentication with biometrics, and logout flows" width="400" />
+
+Features:
+
+- Login + logout flows with an OAuth provider
+- Store credentials in secure storage with hardware-backed cryptography
+- Graceful handling of devices that lack hardware-backed cryptography features
+- Intelligent selection of the best available cryptography + biometrics for enhanced security based on API level and available hardware
+- Reauthenicate back into an account with biometrics
+- Graceful handling of devices which have biometric capabilities, but no enrolled biometrics
+
 Here are some useful sources that I consulted before building this project:
 
 - [Using BiometricPrompt with CryptoObject](https://medium.com/androiddevelopers/using-biometricprompt-with-cryptoobject-how-and-why-aace500ccdb7)
