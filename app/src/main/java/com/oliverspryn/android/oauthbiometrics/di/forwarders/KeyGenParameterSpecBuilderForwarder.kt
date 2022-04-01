@@ -1,10 +1,10 @@
-package com.oliverspryn.android.oauthbiometrics.di.factories
+package com.oliverspryn.android.oauthbiometrics.di.forwarders
 
 import android.security.keystore.KeyGenParameterSpec
 import javax.inject.Inject
 
-class KeyGenParameterSpecBuilderFactory @Inject constructor() {
-    fun build(
+class KeyGenParameterSpecBuilderForwarder @Inject constructor() {
+    fun builder(
         keystoreAlias: String,
         purposes: Int
     ) = KeyGenParameterSpec.Builder(

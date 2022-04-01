@@ -8,9 +8,9 @@ import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.oliverspryn.android.oauthbiometrics.di.factories.IvParameterSpecFactory
-import com.oliverspryn.android.oauthbiometrics.di.factories.KeyGenParameterSpecBuilderFactory
 import com.oliverspryn.android.oauthbiometrics.di.factories.StringFactory
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.CipherForwarder
+import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyGenParameterSpecBuilderForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyGeneratorForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyStoreForwarder
 import com.oliverspryn.android.oauthbiometrics.di.modules.BuildModule
@@ -37,7 +37,7 @@ class CryptographyManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val ivParameterSpecFactory: IvParameterSpecFactory,
     private val keyGeneratorForwarder: KeyGeneratorForwarder,
-    private val keyGenParameterSpecBuilderFactory: KeyGenParameterSpecBuilderFactory,
+    private val keyGenParameterSpecBuilderForwarder: KeyGenParameterSpecBuilderForwarder,
     private val keyStoreForwarder: KeyStoreForwarder,
     @Named(BuildModule.SDK_INT) private val sdkInt: Int,
     private val stringFactory: StringFactory
@@ -91,8 +91,8 @@ class CryptographyManager @Inject constructor(
     @SuppressLint("NewApi") // Lint can't tell I've accounted for this via DI
     @Suppress("DEPRECATION") // setUserAuthenticationValidityDurationSeconds needed, but not available for < API 30
     private fun createSecretKey(): Key {
-        val keyGeneratorParameters = keyGenParameterSpecBuilderFactory
-            .build(
+        val keyGeneratorParameters = keyGenParameterSpecBuilderForwarder
+            .builder(
                 keystoreAlias = NAME,
                 purposes = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
             ).apply {
