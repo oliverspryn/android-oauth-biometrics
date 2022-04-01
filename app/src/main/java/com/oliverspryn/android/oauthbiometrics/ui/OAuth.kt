@@ -30,7 +30,8 @@ fun OAuth(
                     activity = activity,
                     loadingViewModel = viewModel,
                     onNotLoggingIn = { navController.navigateAndClearBackStack("start") },
-                    onLoginSuccess = { navController.navigateAndClearBackStack("account") }
+                    onLoginSuccess = { navController.navigateAndClearBackStack("account") },
+                    onRestartFlow = { navController.navigateAndClearBackStack("start") }
                 )
             }
 
