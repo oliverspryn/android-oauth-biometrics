@@ -1,9 +1,31 @@
 # Android OAuth with Biometrics
+
 🔐 A proof-of-concept application to log into an example Auth0 instance with a PKCE flow and allow secure retrieval of the access and refresh tokens with biometrics
 
 Here are some useful sources that I consulted before building this project:
+
 - [Using BiometricPrompt with CryptoObject](https://medium.com/androiddevelopers/using-biometricprompt-with-cryptoobject-how-and-why-aace500ccdb7)
 - [Biometric Authentication on Android - Part 1](https://medium.com/androiddevelopers/biometric-authentication-on-android-part-1-264523bce85d)
 - [Biometric Authentication on Android - Part 2](https://medium.com/androiddevelopers/biometric-authentication-on-android-part-2-bc4d0dae9863)
 - [OAuth2 + PKCS + Auth0](https://medium.com/geekculture/implement-oauth2-pkce-in-swift-9bdb58873957)
 - [AppAuth for Android](https://github.com/openid/AppAuth-Android)
+
+## Setup an Auth0 Account
+
+Since this project requires an OAuth IDP to run, follow these steps:
+
+1. Create a free [Auth0 account](https://auth0.com/)
+1. Once you have created an account, create a tenant (which can be thought of as a new project)
+1. Inside of the newly created tenant, create a new application by going to the navigation panel &gt; Applications &gt; Create Application &gt; Native
+1. Open up your new application and make a note of the Client ID and the Domain under the Settings tab
+1. On the same tab, add `com.oliverspryn.android.oauthbiometrics://oauth/login` to the Allowed Callback URLs list
+1. Add `com.oliverspryn.android.oauthbiometrics://oauth/logout` to the Allowed Logout URLs list
+1. Create a user for your testing purposes by going to the navigation panel &gt; User Management &gt; Users &gt; Create User
+
+## Run the Project
+
+Once the OAuth tenant, application, and user account are setup, you can incorporate them into this project:
+
+1. Clone the project
+1. Open up `app/build.gradle`
+1. Change the `OAUTH_CLIENT_ID` and `OPENID_CONFIG_URL` to the values you found in the Auth0 management portal
