@@ -4,7 +4,7 @@
 
 <img src=".docs/demo.gif" alt="Login, reauthentication with biometrics, and logout flows" width="400" />
 
-Features:
+**Features:**
 
 - Login + logout flows with an OAuth provider
 - Store credentials in secure storage with hardware-backed cryptography
@@ -12,8 +12,11 @@ Features:
 - Intelligent selection of the best available cryptography + biometrics for enhanced security based on API level and available hardware
 - Reauthenicate back into an account with biometrics
 - Graceful handling of devices which have biometric capabilities, but no enrolled biometrics
+- Network stack automatically injects the acccess token into the necessary API calls
+- Auto-refresh of the access token
+- Auto-logout when the refresh token is invalidated
 
-Here are some useful sources that I consulted before building this project:
+**Here are some useful sources that I consulted before building this project:**
 
 - [Using BiometricPrompt with CryptoObject](https://medium.com/androiddevelopers/using-biometricprompt-with-cryptoobject-how-and-why-aace500ccdb7)
 - [Biometric Authentication on Android - Part 1](https://medium.com/androiddevelopers/biometric-authentication-on-android-part-1-264523bce85d)
