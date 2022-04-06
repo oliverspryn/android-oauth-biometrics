@@ -35,6 +35,7 @@ fun AccountScreen(
 
     AccountScreen(
         uiState = uiState,
+        onBiometricLockoutConfirmed = { accountViewModel.dismissBiometricLockoutRationalePrompt() },
         onBiometricLoginEnabled = { isEnabled ->
             accountViewModel.setBiometricLoginFeatureEnabled(
                 isEnabled,
@@ -42,10 +43,10 @@ fun AccountScreen(
             )
         },
         onDeviceEnrollmentConfirmed = {
-            accountViewModel.dismissDeviceEnrollmentDialog()
+            accountViewModel.dismissDeviceEnrollmentPrompt()
             accountViewModel.goToAndroidSecuritySettings()
         },
-        onDeviceEnrollmentDismissed = { accountViewModel.dismissDeviceEnrollmentDialog() },
+        onDeviceEnrollmentDismissed = { accountViewModel.dismissDeviceEnrollmentPrompt() },
         onEnrollBiometricsTap = { accountViewModel.enrollBiometrics() },
         onLogoutTap = { accountViewModel.logout(activity) }
     )
@@ -54,6 +55,7 @@ fun AccountScreen(
 @Composable
 fun AccountScreen(
     uiState: AccountUiState,
+    onBiometricLockoutConfirmed: () -> Unit,
     onBiometricLoginEnabled: (Boolean) -> Unit,
     onDeviceEnrollmentConfirmed: () -> Unit,
     onDeviceEnrollmentDismissed: () -> Unit,
@@ -130,8 +132,14 @@ fun AccountScreen(
         }
     }
 
-    if (uiState.showDeviceSecurityEnrollmentDialog) {
-        DeviceSecurityEnrollmentDialog(
+    if (uiState.showBiometricLockoutRationalePrompt) {
+        BiometricLockoutRationalePrompt(
+            onBiometricLockoutConfirmed = onBiometricLockoutConfirmed
+        )
+    }
+
+    if (uiState.showDeviceSecurityEnrollmentPrompt) {
+        DeviceSecurityEnrollmentPrompt(
             onDeviceEnrollmentConfirmed = onDeviceEnrollmentConfirmed,
             onDeviceEnrollmentDismissed = onDeviceEnrollmentDismissed
         )
@@ -139,7 +147,29 @@ fun AccountScreen(
 }
 
 @Composable
-private fun DeviceSecurityEnrollmentDialog(
+private fun BiometricLockoutRationalePrompt(
+    onBiometricLockoutConfirmed: () -> Unit
+) {
+    AlertDialog(
+        title = {
+            Text(text = "Confirmation attempts exceeded")
+        },
+        text = {
+            Text(text = "You have exceeded the maximum allowed biometric confirmation attempts. Please try again later.")
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onBiometricLockoutConfirmed
+            ) {
+                Text("OK")
+            }
+        },
+        onDismissRequest = onBiometricLockoutConfirmed
+    )
+}
+
+@Composable
+private fun DeviceSecurityEnrollmentPrompt(
     onDeviceEnrollmentConfirmed: () -> Unit,
     onDeviceEnrollmentDismissed: () -> Unit
 ) {

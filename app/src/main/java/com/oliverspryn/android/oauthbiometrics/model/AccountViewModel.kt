@@ -71,10 +71,18 @@ class AccountViewModel @Inject constructor(
         getUserInfo()
     }
 
-    fun dismissDeviceEnrollmentDialog() {
+    fun dismissBiometricLockoutRationalePrompt() {
         viewModelState.update {
             it.copy(
-                showDeviceSecurityEnrollmentDialog = false
+                showBiometricLockoutRationalePrompt = false
+            )
+        }
+    }
+
+    fun dismissDeviceEnrollmentPrompt() {
+        viewModelState.update {
+            it.copy(
+                showDeviceSecurityEnrollmentPrompt = false
             )
         }
     }
@@ -85,7 +93,7 @@ class AccountViewModel @Inject constructor(
         if (enrollment is DidHandleEnrollmentInternally.No) {
             viewModelState.update {
                 it.copy(
-                    showDeviceSecurityEnrollmentDialog = true
+                    showDeviceSecurityEnrollmentPrompt = true
                 )
             }
         }
@@ -270,7 +278,7 @@ data class AccountUiState(
     val isBiometricLoginFeatureAvailable: Boolean = true,
     val isBiometricLoginOptionChecked: Boolean = false,
     val showBiometricLockoutRationalePrompt: Boolean = false,
-    val showDeviceSecurityEnrollmentDialog: Boolean = false,
+    val showDeviceSecurityEnrollmentPrompt: Boolean = false,
     val userInfo: UserInfoResponse = UserInfoResponse.NoData,
     val userNeedsToRegisterDeviceSecurity: Boolean = false
 ) {
