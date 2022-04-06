@@ -5,6 +5,8 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oliverspryn.android.oauthbiometrics.di.factories.RxJavaFactory
+import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToInitializeCipher
+import com.oliverspryn.android.oauthbiometrics.domain.exceptions.storage.UnableToDecodePersistentAuthState
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.BiometricResult
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.CreateBiometricPromptInfoToPerformBiometricLoginUseCase
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase
@@ -12,9 +14,9 @@ import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.Presen
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.StrongestAvailableAuthenticationTypeForCryptography
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth.InitializeOAuthLoginFlowUseCase
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.oauth.LaunchOAuthLoginFlowUseCase
-import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.DeletePersistentAuthStateUseCase
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.GetPersistentAuthStateUseCase
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.HasBiometricLoginEnabledUseCase
+import com.oliverspryn.android.oauthbiometrics.domain.usecases.storage.LogoutUseCase
 import com.oliverspryn.android.oauthbiometrics.utils.AuthStateManager
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyManager
 import com.oliverspryn.android.oauthbiometrics.utils.security.EncryptedData
@@ -32,11 +34,11 @@ class StartViewModel @Inject constructor(
     private val authStateManager: AuthStateManager,
     private val createBiometricPromptInfoToPerformBiometricLoginUseCase: CreateBiometricPromptInfoToPerformBiometricLoginUseCase,
     private val cryptographyManager: CryptographyManager,
-    private val deletePersistentAuthStateUseCase: DeletePersistentAuthStateUseCase,
     private val getPersistentAuthStateUseCase: GetPersistentAuthStateUseCase,
     private val hasBiometricLoginEnabledUseCase: HasBiometricLoginEnabledUseCase,
     private val initializeOAuthLoginFlowUseCase: InitializeOAuthLoginFlowUseCase,
     private val launchOAuthLoginFlowUseCase: LaunchOAuthLoginFlowUseCase,
+    private val logoutUseCase: LogoutUseCase,
     private val presentBiometricPromptForCipherUseCase: PresentBiometricPromptForCipherUseCase,
     private val rxJavaFactory: RxJavaFactory,
     private val strongestAvailableAuthenticationTypeUseCase: ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase
@@ -57,6 +59,22 @@ class StartViewModel @Inject constructor(
         tryEnableBiometricLoginButton()
     }
 
+    fun dismissBiometricLockoutRationalePrompt() {
+        viewModelState.update {
+            it.copy(
+                showBiometricLockoutRationalePrompt = false
+            )
+        }
+    }
+
+    fun dismissWebLoginRationalePrompt() {
+        viewModelState.update {
+            it.copy(
+                showWebLoginRationalePrompt = false
+            )
+        }
+    }
+
     fun doBiometricLogin(activity: FragmentActivity, onLoginSuccess: () -> Unit) {
         getPersistentAuthStateUseCase()
             .subscribeOn(rxJavaFactory.io)
@@ -64,7 +82,6 @@ class StartViewModel @Inject constructor(
             .flatMapObservable { encryptedData ->
                 val cipher = cryptographyManager.getInitializedCipherForDecryption(encryptedData.iv)
                 val promptInfo = createBiometricPromptInfoToPerformBiometricLoginUseCase()
-                setIsLoading()
 
                 presentBiometricPromptForCipherUseCase(
                     activity = activity,
@@ -89,26 +106,24 @@ class StartViewModel @Inject constructor(
                     onLoginSuccess()
                 }
 
-                // Alternative is something like a bad fingerprint
+                // Alternative condition is something like a bad fingerprint
                 // Not an error yet
-                setIsLoadingComplete()
             }, { error ->
-                if (error is BiometricResult.Error && error.isBiometricLockout) {
-                    disableBiometricLogin()
-                }
+                val isBiometricError = error is BiometricResult.Error && error.isBiometricLockout
+                val isCipherError = error is UnableToInitializeCipher
+                val isDecodeError = error is UnableToDecodePersistentAuthState
 
-                setIsLoadingComplete()
+                if (isBiometricError) {
+                    disableBiometricLoginButton()
+                    showBiometricLockoutRationalePrompt()
+                } else if (isCipherError || isDecodeError) {
+                    disableBiometricLoginButton()
+                    doLogout()
+                    showWebLoginRationalePrompt()
+                }
             }, {
                 // Login success, handled with the data provided in onNext()
             })
-    }
-
-    private fun storeAuthStateInStaticMemory(
-        cipherText: ByteArray,
-        result: BiometricPrompt.AuthenticationResult
-    ) {
-        val cipher = result.cryptoObject?.cipher ?: return
-        authStateManager.serializedAuthState = cryptographyManager.decryptData(cipherText, cipher)
     }
 
     fun doWebLogin() {
@@ -117,30 +132,32 @@ class StartViewModel @Inject constructor(
         }
     }
 
-    private fun disableBiometricLogin() {
-        deletePersistentAuthStateUseCase()
-            .subscribeOn(rxJavaFactory.io)
-            .observeOn(rxJavaFactory.ui)
-            .subscribe({
-                viewModelState.update {
-                    it.copy(isBiometricLoginEnabled = false)
-                }
-            }, {
-                viewModelState.update {
-                    it.copy(isBiometricLoginEnabled = false)
-                }
-            })
+    private fun disableBiometricLoginButton() {
+        viewModelState.update {
+            it.copy(isBiometricLoginEnabled = false)
+        }
     }
 
-    private fun disableWebLogin() {
+    private fun disableWebLoginButton() {
         viewModelState.update {
             it.copy(
-                isWebLoginEnabled = true
+                isWebLoginEnabled = false
             )
         }
     }
 
-    private fun enableWebLogin() {
+    private fun doLogout() {
+        logoutUseCase(false)
+            .subscribeOn(rxJavaFactory.io)
+            .observeOn(rxJavaFactory.ui)
+            .subscribe({
+                // Best effort
+            }, {
+                // Ignore the outcomes :)
+            })
+    }
+
+    private fun enableWebLoginButton() {
         viewModelState.update {
             it.copy(
                 isWebLoginEnabled = true
@@ -152,15 +169,15 @@ class StartViewModel @Inject constructor(
         initializeOAuthLoginFlowUseCase()
             .subscribeOn(rxJavaFactory.io)
             .doOnSubscribe {
-                disableWebLogin()
+                disableWebLoginButton()
                 setIsLoading()
             }
             .doOnSuccess {
-                enableWebLogin()
+                enableWebLoginButton()
                 setIsLoadingComplete()
             }
             .doOnError {
-                enableWebLogin()
+                enableWebLoginButton()
                 setIsLoadingComplete()
             }
             .subscribe({
@@ -186,6 +203,30 @@ class StartViewModel @Inject constructor(
         }
     }
 
+    private fun showBiometricLockoutRationalePrompt() {
+        viewModelState.update {
+            it.copy(
+                showBiometricLockoutRationalePrompt = true
+            )
+        }
+    }
+
+    private fun showWebLoginRationalePrompt() {
+        viewModelState.update {
+            it.copy(
+                showWebLoginRationalePrompt = true
+            )
+        }
+    }
+
+    private fun storeAuthStateInStaticMemory(
+        cipherText: ByteArray,
+        result: BiometricPrompt.AuthenticationResult
+    ) {
+        val cipher = result.cryptoObject?.cipher ?: return
+        authStateManager.serializedAuthState = cryptographyManager.decryptData(cipherText, cipher)
+    }
+
     private fun tryEnableBiometricLoginButton() {
         val biometricsAvailableFromSystem =
             strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available
@@ -200,6 +241,8 @@ class StartViewModel @Inject constructor(
                     )
                 }
             }, {
+                doLogout() // In case biometrics were previously available, user logged in, then removed biometrics
+
                 viewModelState.update {
                     it.copy(
                         isBiometricLoginEnabled = false
@@ -212,7 +255,9 @@ class StartViewModel @Inject constructor(
 data class StartUiState(
     val isBiometricLoginEnabled: Boolean = false,
     val isLoading: Boolean = true,
-    val isWebLoginEnabled: Boolean = false
+    val isWebLoginEnabled: Boolean = false,
+    val showBiometricLockoutRationalePrompt: Boolean = false,
+    val showWebLoginRationalePrompt: Boolean = false
 )
 
 private data class BiometricLoginPayload(

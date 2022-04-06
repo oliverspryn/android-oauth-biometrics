@@ -2,9 +2,11 @@ package com.oliverspryn.android.oauthbiometrics.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,7 +29,9 @@ fun StartScreen(
 
     StartScreen(
         uiState = uiState,
+        onBiometricLockoutConfirmed = { startViewModel.dismissBiometricLockoutRationalePrompt() },
         onBiometricLoginTap = { startViewModel.doBiometricLogin(activity, onLoginSuccess) },
+        onWebLoginConfirmed = { startViewModel.dismissWebLoginRationalePrompt() },
         onWebLoginTap = { startViewModel.doWebLogin() }
     )
 }
@@ -35,7 +39,9 @@ fun StartScreen(
 @Composable
 fun StartScreen(
     uiState: StartUiState,
+    onBiometricLockoutConfirmed: () -> Unit,
     onBiometricLoginTap: () -> Unit,
+    onWebLoginConfirmed: () -> Unit,
     onWebLoginTap: () -> Unit
 ) {
     ConstraintLayout(
@@ -77,6 +83,62 @@ fun StartScreen(
             }
         }
     }
+
+    if (uiState.showBiometricLockoutRationalePrompt) {
+        BiometricLockoutRationalePrompt(
+            onBiometricLockoutConfirmed = onBiometricLockoutConfirmed
+        )
+    }
+
+    if (uiState.showWebLoginRationalePrompt) {
+        WebLoginRationalePrompt(
+            onWebLoginConfirmed = onWebLoginConfirmed
+        )
+    }
+}
+
+@Composable
+private fun BiometricLockoutRationalePrompt(
+    onBiometricLockoutConfirmed: () -> Unit
+) {
+    AlertDialog(
+        title = {
+            Text(text = "Login attempts exceeded")
+        },
+        text = {
+            Text(text = "You have exceeded the maximum allowed biometric login attempts. Please log in through the web or try again later.")
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onBiometricLockoutConfirmed
+            ) {
+                Text("OK")
+            }
+        },
+        onDismissRequest = onBiometricLockoutConfirmed
+    )
+}
+
+@Composable
+private fun WebLoginRationalePrompt(
+    onWebLoginConfirmed: () -> Unit
+) {
+    AlertDialog(
+        title = {
+            Text(text = "Biometric login disabled")
+        },
+        text = {
+            Text(text = "The biometric settings on your device have changed. For security purposes, you will need to login again through the web.")
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onWebLoginConfirmed
+            ) {
+                Text("OK")
+            }
+        },
+        onDismissRequest = onWebLoginConfirmed
+    )
 }
 
 @Preview(showSystemUi = true)
@@ -84,7 +146,9 @@ fun StartScreen(
 fun PreviewStartScreen() {
     StartScreen(
         uiState = StartUiState(),
+        onBiometricLockoutConfirmed = {},
         onBiometricLoginTap = {},
+        onWebLoginConfirmed = {},
         onWebLoginTap = {}
     )
 }

@@ -86,17 +86,24 @@ fun AccountScreen(
             Spacer(modifier = Modifier.height(48.dp))
         }
 
-        Text(
-            text = "Enable Biometric Login?",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        if (uiState.isBiometricLoginFeatureAvailable) {
+            Text(
+                text = "Enable Biometric Login?",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
 
-        Switch(
-            checked = uiState.isBiometricLoginOptionChecked,
-            enabled = uiState.isBiometricLoginFeatureAvailable,
-            onCheckedChange = onBiometricLoginEnabled
-        )
+            Switch(
+                checked = uiState.isBiometricLoginOptionChecked,
+                onCheckedChange = onBiometricLoginEnabled
+            )
+        } else if (!uiState.userNeedsToRegisterDeviceSecurity) {
+            Text(
+                text = "Biometric login not available on your device",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
 
         if (uiState.userNeedsToRegisterDeviceSecurity) {
             Spacer(modifier = Modifier.height(16.dp))
