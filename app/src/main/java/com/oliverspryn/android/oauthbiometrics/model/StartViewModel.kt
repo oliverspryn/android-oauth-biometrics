@@ -1,10 +1,10 @@
 package com.oliverspryn.android.oauthbiometrics.model
 
-import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oliverspryn.android.oauthbiometrics.di.factories.RxJavaFactory
+import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToDecryptData
 import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToInitializeCipher
 import com.oliverspryn.android.oauthbiometrics.domain.exceptions.storage.UnableToDecodePersistentAuthState
 import com.oliverspryn.android.oauthbiometrics.domain.usecases.biometrics.BiometricResult
@@ -96,21 +96,29 @@ class StartViewModel @Inject constructor(
                     )
                 }
             }
-            .subscribe({ biometricLoginPayload ->
+            .observeOn(rxJavaFactory.io)
+            .flatMap { biometricLoginPayload ->
                 if (biometricLoginPayload.biometricResult is BiometricResult.Success) {
-                    storeAuthStateInStaticMemory(
-                        cipherText = biometricLoginPayload.encryptedData.cipherText,
-                        result = biometricLoginPayload.biometricResult.result
-                    )
+                    val cipher = biometricLoginPayload.biometricResult.result.cryptoObject?.cipher
+                        ?: return@flatMap Observable.error(UnableToInitializeCipher())
 
-                    onLoginSuccess()
+                    val authStateCipherText = biometricLoginPayload.encryptedData.cipherText
+                    val authStatePlainText =
+                        cryptographyManager.decryptData(authStateCipherText, cipher)
+
+                    authStateManager.serializedAuthState = authStatePlainText
                 }
 
-                // Alternative condition is something like a bad fingerprint
-                // Not an error yet
+                Observable.just(biometricLoginPayload.biometricResult)
+            }
+            .observeOn(rxJavaFactory.ui)
+            .subscribe({
+                // Can react here for something like a successful or bad fingerprint
+                // Not yet a terminating condition
             }, { error ->
                 val isBiometricError = error is BiometricResult.Error && error.isBiometricLockout
-                val isCipherError = error is UnableToInitializeCipher
+                val isCipherError =
+                    error is UnableToDecryptData || error is UnableToInitializeCipher
                 val isDecodeError = error is UnableToDecodePersistentAuthState
 
                 if (isBiometricError) {
@@ -122,7 +130,7 @@ class StartViewModel @Inject constructor(
                     showWebLoginRationalePrompt()
                 }
             }, {
-                // Login success, handled with the data provided in onNext()
+                onLoginSuccess()
             })
     }
 
@@ -217,14 +225,6 @@ class StartViewModel @Inject constructor(
                 showWebLoginRationalePrompt = true
             )
         }
-    }
-
-    private fun storeAuthStateInStaticMemory(
-        cipherText: ByteArray,
-        result: BiometricPrompt.AuthenticationResult
-    ) {
-        val cipher = result.cryptoObject?.cipher ?: return
-        authStateManager.serializedAuthState = cryptographyManager.decryptData(cipherText, cipher)
     }
 
     private fun tryEnableBiometricLoginButton() {

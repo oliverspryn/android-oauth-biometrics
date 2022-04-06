@@ -22,6 +22,21 @@ object CryptographyConfig {
         const val SIZE = 256
     }
 
+    // This framework can be configured to allow API 30+ devices to use
+    // the device credentials (PIN/pattern/etc) either in place of, or
+    // in addition to the biometric offering to secure the AES key.
+    //
+    // However, enabling this flag comes with an apparent trade off. To
+    // maximize user security, this framework configures the AES key to
+    // become invalidated any time the user adds another biometric option
+    // such as an additional fingerprint. This protects the user's
+    // information from malicious actors who gain access to their device
+    // and register their own biometric data.
+    //
+    // By disabling this flag, the users must authenticate with his or her
+    // biometrics and run the risk of not being able to use this app's
+    // secondary authentication if the biometrics fail too many times.
+    const val ALLOW_DEVICE_CREDENTIALS_AS_BIOMETRIC_OPTION = false
     val BYTE_ARRAY_ENCODING = Charsets.UTF_8
     const val KEY_STORE_NAME = "AndroidKeyStore"
 }

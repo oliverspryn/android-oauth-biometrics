@@ -31,7 +31,7 @@ fun AccountScreen(
     activity: FragmentActivity
 ) {
     val uiState by accountViewModel.uiState.collectAsState()
-    accountViewModel.updateBiometricsOption()
+    accountViewModel.updateBiometricsOptionAvailability()
 
     AccountScreen(
         uiState = uiState,

@@ -1,8 +1,12 @@
 package com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography
 
-import android.security.keystore.KeyPermanentlyInvalidatedException
+class UnableToInitializeCipher : Throwable {
+    constructor() : super(
+        message = "The key has been rotated within the Android keystore and any ciphertext encrypted with the old key is no longer accessible."
+    )
 
-class UnableToInitializeCipher(cause: KeyPermanentlyInvalidatedException) : Throwable(
-    message = "The key has been rotated within the Android keystore and any ciphertext encrypted with the old key is no longer accessible.",
-    cause = cause
-)
+    constructor(cause: Throwable) : super(
+        message = "The key has been rotated within the Android keystore and any ciphertext encrypted with the old key is no longer accessible.",
+        cause = cause
+    )
+}

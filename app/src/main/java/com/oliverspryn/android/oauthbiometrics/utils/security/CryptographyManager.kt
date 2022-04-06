@@ -14,6 +14,8 @@ import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyGenParameterSpec
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyGeneratorForwarder
 import com.oliverspryn.android.oauthbiometrics.di.forwarders.KeyStoreForwarder
 import com.oliverspryn.android.oauthbiometrics.di.modules.BuildModule
+import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToDecryptData
+import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToEncryptData
 import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToInitializeCipher
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.BYTE_ARRAY_ENCODING
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.Base64.DELIMITER
@@ -25,10 +27,12 @@ import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.Key.NAME
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.Key.SIZE
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.security.InvalidKeyException
 import java.security.Key
 import java.security.KeyStoreException
 import java.security.UnrecoverableKeyException
 import javax.crypto.Cipher
+import javax.crypto.IllegalBlockSizeException
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -44,30 +48,41 @@ class CryptographyManager @Inject constructor(
 ) {
 
     fun decryptData(cipherText: ByteArray, cipher: Cipher): String {
-        val plaintext = cipher.doFinal(cipherText)
-        return stringFactory.newInstance(plaintext, BYTE_ARRAY_ENCODING)
+        try {
+            val plaintext = cipher.doFinal(cipherText)
+            return stringFactory.newInstance(plaintext, BYTE_ARRAY_ENCODING)
+        } catch (e: IllegalBlockSizeException) {
+            throw UnableToDecryptData(e)
+        }
     }
 
     fun encryptData(plaintext: String, cipher: Cipher): EncryptedData {
-        val cipherText = cipher.doFinal(plaintext.toByteArray(BYTE_ARRAY_ENCODING))
+        try {
+            val cipherText = cipher.doFinal(plaintext.toByteArray(BYTE_ARRAY_ENCODING))
 
-        return EncryptedData(
-            cipherText = cipherText,
-            iv = cipher.iv
-        )
+            return EncryptedData(
+                cipherText = cipherText,
+                iv = cipher.iv
+            )
+        } catch (e: IllegalBlockSizeException) {
+            throw UnableToEncryptData(e)
+        }
     }
 
     fun getInitializedCipherForDecryption(iv: ByteArray): Cipher {
         val cipher = getCipher()
-        val secretKey = getOrCreateSecretKey()
 
         try {
+            val secretKey = getOrCreateSecretKey() ?: throw UnableToInitializeCipher()
+
             cipher.init(
                 Cipher.DECRYPT_MODE,
                 secretKey,
                 ivParameterSpecFactory.newInstance(iv)
             )
         } catch (e: KeyPermanentlyInvalidatedException) {
+            throw UnableToInitializeCipher(e)
+        } catch (e: InvalidKeyException) {
             throw UnableToInitializeCipher(e)
         }
 
@@ -76,12 +91,15 @@ class CryptographyManager @Inject constructor(
 
     fun getInitializedCipherForEncryption(): Cipher {
         val cipher = getCipher()
-        var secretKey = getOrCreateSecretKey()
 
         try {
+            val secretKey = getOrCreateSecretKey() ?: throw UnableToInitializeCipher()
             cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         } catch (e: KeyPermanentlyInvalidatedException) {
-            secretKey = tryDeleteAndRecreateKey()
+            val secretKey = tryDeleteAndRecreateKey() ?: throw UnableToInitializeCipher()
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        } catch (e: InvalidKeyException) {
+            val secretKey = tryDeleteAndRecreateKey() ?: throw UnableToInitializeCipher()
             cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         }
 
@@ -90,47 +108,75 @@ class CryptographyManager @Inject constructor(
 
     @SuppressLint("NewApi") // Lint can't tell I've accounted for this via DI
     @Suppress("DEPRECATION") // setUserAuthenticationValidityDurationSeconds needed, but not available for < API 30
-    private fun createSecretKey(): Key {
-        val keyGeneratorParameters = keyGenParameterSpecBuilderForwarder
-            .builder(
-                keystoreAlias = NAME,
-                purposes = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            ).apply {
-                setBlockModes(BLOCK_MODE)
-                setEncryptionPaddings(PADDING)
-                setKeySize(SIZE)
-                setRandomizedEncryptionRequired(true)
-                setUserAuthenticationRequired(true)
+    private fun createSecretKey(): Key? {
+        try {
+            val keyGeneratorParameters = keyGenParameterSpecBuilderForwarder
+                .builder(
+                    keystoreAlias = NAME,
+                    purposes = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                ).apply {
+                    setBlockModes(BLOCK_MODE)
+                    setEncryptionPaddings(PADDING)
+                    setKeySize(SIZE)
+                    setRandomizedEncryptionRequired(true)
+                    setUserAuthenticationRequired(true)
 
-                if (sdkInt >= Build.VERSION_CODES.N) {
-                    setInvalidatedByBiometricEnrollment(true)
-                    setUserAuthenticationValidWhileOnBody(false)
+                    if (sdkInt >= Build.VERSION_CODES.N) {
+                        setInvalidatedByBiometricEnrollment(true)
+                        setUserAuthenticationValidWhileOnBody(false)
+                    }
+
+                    if (sdkInt >= Build.VERSION_CODES.P) {
+                        val hasStrongBox = context
+                            .packageManager
+                            .hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+
+                        if (hasStrongBox) setIsStrongBoxBacked(true)
+                        setUnlockedDeviceRequired(true)
+                    }
+
+                    if (sdkInt >= Build.VERSION_CODES.R) {
+                        // Samsung seems to require both types even though this framework can
+                        // be configured to only accept biometrics as an authentication type
+                        // and not ask for device credentials (PIN/pattern/etc).
+                        //
+                        // Failure to provide the AUTH_DEVICE_CREDENTIAL flag will result in
+                        // a UserNotAuthenticatedException when initializing the cipher to pass
+                        // into the biometric prompt. It's a catch 22 since you need the cipher
+                        // to provide to the biometric prompt, but the cipher won't initialize
+                        // without a biometric prompt. Here is a possible workaround
+                        // https://stackoverflow.com/a/50905156/ but it involved invoking the
+                        // cipher initializer twice with the legacy FingerprintManager in the
+                        // middle, and that all seemed pretty sus. No amount of reinstalling
+                        // the app or deleting and re-adding biometrics/device credentials
+                        // seems to fix this issue. So, we're using both flags.
+                        //
+                        // Whenever the user is presented with a biometric prompt, the dialog
+                        // will honor the allow/disallow device credentials flag. So, any time
+                        // the user unlocks the key, it will only use biometrics.
+                        //
+                        // Perhaps Samsung requires the AUTH_DEVICE_CREDENTIAL in addition to
+                        // AUTH_BIOMETRIC_STRONG because of this note:
+                        // https://developer.android.com/training/sign-in/biometric-auth#biometric-or-lock-screen
+
+                        setUserAuthenticationParameters(
+                            0,
+                            KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
+                        )
+                    } else {
+                        // Functionally the same call under the hood as above for older platforms
+                        setUserAuthenticationValidityDurationSeconds(0)
+                    }
                 }
+                .build()
 
-                if (sdkInt >= Build.VERSION_CODES.P) {
-                    val hasStrongBox = context
-                        .packageManager
-                        .hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+            val keyGenerator = keyGeneratorForwarder.getInstance(ALGORITHM, KEY_STORE_NAME)
+            keyGenerator.init(keyGeneratorParameters)
 
-                    if (hasStrongBox) setIsStrongBoxBacked(true)
-                    setUnlockedDeviceRequired(true)
-                }
-
-                if (sdkInt >= Build.VERSION_CODES.R) {
-                    setUserAuthenticationParameters(
-                        0,
-                        KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
-                    )
-                } else {
-                    setUserAuthenticationValidityDurationSeconds(-1)
-                }
-            }
-            .build()
-
-        val keyGenerator = keyGeneratorForwarder.getInstance(ALGORITHM, KEY_STORE_NAME)
-        keyGenerator.init(keyGeneratorParameters)
-
-        return keyGenerator.generateKey()
+            return keyGenerator.generateKey()
+        } catch (e: IllegalStateException) {
+            return null // Biometrics are required to generate the key and are not present
+        }
     }
 
     private fun getCipher(): Cipher {
@@ -138,7 +184,7 @@ class CryptographyManager @Inject constructor(
         return cipherForwarder.getInstance(transformation)
     }
 
-    private fun getOrCreateSecretKey(): Key {
+    private fun getOrCreateSecretKey(): Key? {
         val keyStore = keyStoreForwarder.getInstance(KEY_STORE_NAME)
         keyStore.load(null) // Keystore must be loaded before it can be accessed
 
@@ -155,7 +201,7 @@ class CryptographyManager @Inject constructor(
         }
     }
 
-    private fun tryDeleteAndRecreateKey(): Key {
+    private fun tryDeleteAndRecreateKey(): Key? {
         val keyStore = keyStoreForwarder.getInstance(KEY_STORE_NAME)
         keyStore.load(null) // Keystore must be loaded before it can be accessed
 
