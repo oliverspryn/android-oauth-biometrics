@@ -24,8 +24,10 @@ class ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase @Inject c
      * may use.
      *
      * Tested in decreasing order of preference for >= API 30:
-     *   - BIOMETRIC_STRONG or DEVICE_CREDENTIAL
+     *   - BIOMETRIC_STRONG or DEVICE_CREDENTIAL,
      *   - BIOMETRIC_STRONG
+     *   - BIOMETRIC_WEAK or DEVICE_CREDENTIAL,
+     *   - BIOMETRIC_WEAK
      *   - DEVICE_CREDENTIAL
      *
      *  Tested in decreasing order of preference for < API 30:
@@ -65,11 +67,9 @@ class ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase @Inject c
                 arrayListOf(
                     BIOMETRIC_STRONG or DEVICE_CREDENTIAL,
                     BIOMETRIC_STRONG,
+                    BIOMETRIC_WEAK or DEVICE_CREDENTIAL,
+                    BIOMETRIC_WEAK,
                     DEVICE_CREDENTIAL
-                )
-            } else if (sdkInt >= Build.VERSION_CODES.R && !CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN) {
-                arrayListOf(
-                    BIOMETRIC_STRONG
                 )
             } else {
                 arrayListOf(
@@ -98,6 +98,18 @@ class ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase @Inject c
 sealed interface StrongestAvailableAuthenticationTypeForCryptography {
     data class Available(val authenticators: Int) :
         StrongestAvailableAuthenticationTypeForCryptography {
+        val allowsAllBiometrics: Boolean
+            get() = authenticators and (BIOMETRIC_STRONG or BIOMETRIC_WEAK) != 0
+
+        val allowsAnyBiometrics: Boolean
+            get() = authenticators != DEVICE_CREDENTIAL
+
+        val allowsBiometricStrong: Boolean
+            get() = authenticators and BIOMETRIC_STRONG != 0
+
+        val allowsBiometricWeak: Boolean
+            get() = authenticators and BIOMETRIC_WEAK != 0
+
         val allowsDeviceCredentials: Boolean
             get() = authenticators and DEVICE_CREDENTIAL != 0
     }

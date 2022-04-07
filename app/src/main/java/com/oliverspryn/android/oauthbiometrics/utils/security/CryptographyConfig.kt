@@ -39,7 +39,7 @@ object CryptographyConfig {
     // By disabling this flag, the users must authenticate with his or her
     // biometrics and run the risk of not being able to use this app's
     // secondary authentication if the biometrics fail too many times.
-    const val ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN = true
+    const val ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN = false
     val BYTE_ARRAY_ENCODING = Charsets.UTF_8
     const val KEY_STORE_NAME = "AndroidKeyStore"
 }

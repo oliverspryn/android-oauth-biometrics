@@ -2,6 +2,8 @@ package com.oliverspryn.android.oauthbiometrics.model
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
+import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -163,7 +165,21 @@ class AccountViewModel @Inject constructor(
                 }
             }
             .observeOn(rxJavaFactory.ui)
-            .subscribe({
+            .subscribe({ biometricOutcome ->
+                if (biometricOutcome is BiometricResult.Success) {
+                    val type = when (biometricOutcome.result.authenticationType) {
+                        BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC -> "Biometric"
+                        BiometricPrompt.AUTHENTICATION_RESULT_TYPE_DEVICE_CREDENTIAL -> "Device Credential"
+                        else -> "Unknown"
+                    }
+
+                    Toast.makeText(
+                        activity,
+                        "Authenticated with: $type",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
                 // Can react here for something like a successful or bad fingerprint
                 // Not yet a terminating condition
             }, { error ->
@@ -220,11 +236,24 @@ class AccountViewModel @Inject constructor(
             }
             .subscribe({ isEnabled ->
                 val availableAuthenticators = strongestAvailableAuthenticationTypeUseCase()
+                val authenticationOptions =
+                    if (availableAuthenticators is StrongestAvailableAuthenticationTypeForCryptography.Available) {
+                        val stringBuilder = StringBuilder()
+
+                        if (availableAuthenticators.allowsBiometricStrong) stringBuilder.append("Biometric Strong, ")
+                        if (availableAuthenticators.allowsBiometricWeak) stringBuilder.append("Biometric Weak, ")
+                        if (availableAuthenticators.allowsDeviceCredentials) stringBuilder.append("Device Credentials")
+
+                        stringBuilder.toString().trim().trimEnd(',')
+                    } else {
+                        ""
+                    }
 
                 viewModelState.update {
                     it.copy(
                         isBiometricLoginFeatureAvailable = availableAuthenticators is StrongestAvailableAuthenticationTypeForCryptography.Available,
                         isBiometricLoginOptionChecked = isEnabled,
+                        supportedBiometricClassifiers = authenticationOptions,
                         userNeedsToRegisterDeviceSecurity = availableAuthenticators is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
                     )
                 }
@@ -235,6 +264,7 @@ class AccountViewModel @Inject constructor(
                     it.copy(
                         isBiometricLoginFeatureAvailable = availableAuthenticators is StrongestAvailableAuthenticationTypeForCryptography.Available,
                         isBiometricLoginOptionChecked = false,
+                        supportedBiometricClassifiers = "",
                         userNeedsToRegisterDeviceSecurity = availableAuthenticators is StrongestAvailableAuthenticationTypeForCryptography.NothingEnrolled
                     )
                 }
@@ -286,6 +316,7 @@ data class AccountUiState(
     val isBiometricLoginOptionChecked: Boolean = false,
     val showBiometricLockoutRationalePrompt: Boolean = false,
     val showDeviceSecurityEnrollmentPrompt: Boolean = false,
+    val supportedBiometricClassifiers: String = "",
     val userInfo: UserInfoResponse = UserInfoResponse.NoData,
     val userNeedsToRegisterDeviceSecurity: Boolean = false
 ) {

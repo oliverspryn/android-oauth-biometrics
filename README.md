@@ -43,3 +43,4 @@ Once the OAuth tenant, application, and user account are setup, you can incorpor
 1. Clone the project
 1. Open up `app/build.gradle`
 1. Change the `OAUTH_CLIENT_ID` and `OPENID_CONFIG_URL` to the values you found in the Auth0 management portal
+1. Configure `CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN` to allow or disallow PIN/pattern/etc as an additional secondary login option

@@ -95,6 +95,18 @@ fun AccountScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
+            Text(
+                text = "Available authentication classifiers:",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Text(
+                text = uiState.supportedBiometricClassifiers,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
             Switch(
                 checked = uiState.isBiometricLoginOptionChecked,
                 onCheckedChange = onBiometricLoginEnabled
