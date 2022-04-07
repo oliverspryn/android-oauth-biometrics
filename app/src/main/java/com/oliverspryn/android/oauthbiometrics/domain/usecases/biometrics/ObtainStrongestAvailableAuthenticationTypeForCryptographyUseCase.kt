@@ -61,13 +61,13 @@ class ObtainStrongestAvailableAuthenticationTypeForCryptographyUseCase @Inject c
     operator fun invoke(): StrongestAvailableAuthenticationTypeForCryptography {
         val biometricManager = biometricManagerForwarder.from(context)
         val authenticatorsToTry =
-            if (sdkInt >= Build.VERSION_CODES.R && CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_BIOMETRIC_OPTION) {
+            if (sdkInt >= Build.VERSION_CODES.R && CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN) {
                 arrayListOf(
                     BIOMETRIC_STRONG or DEVICE_CREDENTIAL,
                     BIOMETRIC_STRONG,
                     DEVICE_CREDENTIAL
                 )
-            } else if (sdkInt >= Build.VERSION_CODES.R && !CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_BIOMETRIC_OPTION) {
+            } else if (sdkInt >= Build.VERSION_CODES.R && !CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN) {
                 arrayListOf(
                     BIOMETRIC_STRONG
                 )

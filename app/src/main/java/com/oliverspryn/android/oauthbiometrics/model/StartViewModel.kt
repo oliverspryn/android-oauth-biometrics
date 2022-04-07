@@ -56,7 +56,7 @@ class StartViewModel @Inject constructor(
 
     init {
         initializeOAuthLoginFlow()
-        tryEnableBiometricLoginButton()
+        updateBiometricLoginButton()
     }
 
     fun dismissBiometricLockoutRationalePrompt() {
@@ -138,6 +138,30 @@ class StartViewModel @Inject constructor(
         authRequest?.let { request ->
             launchOAuthLoginFlowUseCase(request)
         }
+    }
+
+    fun updateBiometricLoginButton() {
+        val biometricsAvailableFromSystem =
+            strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available
+
+        hasBiometricLoginEnabledUseCase()
+            .subscribeOn(rxJavaFactory.io)
+            .observeOn(rxJavaFactory.ui)
+            .subscribe({ appBiometricLoginEnabled ->
+                viewModelState.update {
+                    it.copy(
+                        isBiometricLoginEnabled = biometricsAvailableFromSystem && appBiometricLoginEnabled
+                    )
+                }
+            }, {
+                doLogout() // In case biometrics were previously available, user logged in, then removed biometrics
+
+                viewModelState.update {
+                    it.copy(
+                        isBiometricLoginEnabled = false
+                    )
+                }
+            })
     }
 
     private fun disableBiometricLoginButton() {
@@ -225,30 +249,6 @@ class StartViewModel @Inject constructor(
                 showWebLoginRationalePrompt = true
             )
         }
-    }
-
-    private fun tryEnableBiometricLoginButton() {
-        val biometricsAvailableFromSystem =
-            strongestAvailableAuthenticationTypeUseCase() is StrongestAvailableAuthenticationTypeForCryptography.Available
-
-        hasBiometricLoginEnabledUseCase()
-            .subscribeOn(rxJavaFactory.io)
-            .observeOn(rxJavaFactory.ui)
-            .subscribe({ appBiometricLoginEnabled ->
-                viewModelState.update {
-                    it.copy(
-                        isBiometricLoginEnabled = biometricsAvailableFromSystem && appBiometricLoginEnabled
-                    )
-                }
-            }, {
-                doLogout() // In case biometrics were previously available, user logged in, then removed biometrics
-
-                viewModelState.update {
-                    it.copy(
-                        isBiometricLoginEnabled = false
-                    )
-                }
-            })
     }
 }
 

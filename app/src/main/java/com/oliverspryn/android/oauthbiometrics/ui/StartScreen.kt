@@ -26,6 +26,7 @@ fun StartScreen(
     onLoginSuccess: () -> Unit
 ) {
     val uiState by startViewModel.uiState.collectAsState()
+    startViewModel.updateBiometricLoginButton()
 
     StartScreen(
         uiState = uiState,

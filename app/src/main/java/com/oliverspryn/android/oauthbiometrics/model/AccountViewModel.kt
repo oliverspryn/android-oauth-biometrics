@@ -201,6 +201,23 @@ class AccountViewModel @Inject constructor(
         hasBiometricLoginEnabledUseCase()
             .subscribeOn(rxJavaFactory.io)
             .observeOn(rxJavaFactory.ui)
+            .flatMap { isEnabled ->
+                val availableAuthenticators = strongestAvailableAuthenticationTypeUseCase()
+
+                // Clears any cached state if the app remembers that the user enabled biometric login
+                // but the user later cleared the biometrics/device credentials and decided to add
+                // them back in at the behest of the app's prompt.
+                // Otherwise, we would be trying to use data associated with an old key from the
+                // previous credential set.
+                // Only delete the old data set, but don't do a full logout, since that would delete
+                // the volatile auth state.
+                if (isEnabled && availableAuthenticators !is StrongestAvailableAuthenticationTypeForCryptography.Available) {
+                    deletePersistentAuthStateUseCase()
+                        .andThen(Single.just(false))
+                } else {
+                    Single.just(isEnabled)
+                }
+            }
             .subscribe({ isEnabled ->
                 val availableAuthenticators = strongestAvailableAuthenticationTypeUseCase()
 

@@ -30,7 +30,7 @@ class EnrollDeviceSecurityUseCase @Inject constructor(
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
 
                 val allowedTypes =
-                    if (CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_BIOMETRIC_OPTION) {
+                    if (CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN) {
                         BIOMETRIC_STRONG or DEVICE_CREDENTIAL
                     } else {
                         BIOMETRIC_STRONG

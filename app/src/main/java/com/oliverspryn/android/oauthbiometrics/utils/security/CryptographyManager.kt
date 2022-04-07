@@ -17,6 +17,7 @@ import com.oliverspryn.android.oauthbiometrics.di.modules.BuildModule
 import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToDecryptData
 import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToEncryptData
 import com.oliverspryn.android.oauthbiometrics.domain.exceptions.cryptography.UnableToInitializeCipher
+import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.BYTE_ARRAY_ENCODING
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.Base64.DELIMITER
 import com.oliverspryn.android.oauthbiometrics.utils.security.CryptographyConfig.Base64.ENCODING
@@ -30,6 +31,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.InvalidKeyException
 import java.security.KeyStoreException
 import java.security.UnrecoverableKeyException
+import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.IllegalBlockSizeException
 import javax.crypto.SecretKey
@@ -53,6 +55,8 @@ class CryptographyManager @Inject constructor(
             return stringFactory.newInstance(plaintext, BYTE_ARRAY_ENCODING)
         } catch (e: IllegalBlockSizeException) {
             throw UnableToDecryptData(e)
+        } catch (e: BadPaddingException) {
+            throw UnableToDecryptData(e)
         }
     }
 
@@ -65,6 +69,8 @@ class CryptographyManager @Inject constructor(
                 iv = cipher.iv
             )
         } catch (e: IllegalBlockSizeException) {
+            throw UnableToEncryptData(e)
+        } catch (e: BadPaddingException) {
             throw UnableToEncryptData(e)
         }
     }
@@ -92,7 +98,8 @@ class CryptographyManager @Inject constructor(
     fun getInitializedCipherForEncryption(): Cipher {
         val cipher = getCipher()
 
-        val secretKey = try {
+        // Biometric changes tend to cause exceptions here
+        var secretKey = try {
             getOrCreateSecretKey()
         } catch (e: KeyPermanentlyInvalidatedException) {
             tryDeleteAndRecreateKey()
@@ -100,7 +107,17 @@ class CryptographyManager @Inject constructor(
             tryDeleteAndRecreateKey()
         }
 
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        // PIN/pattern changes tend to cause exceptions here
+        try {
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        } catch (e: KeyPermanentlyInvalidatedException) {
+            secretKey = tryDeleteAndRecreateKey()
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        } catch (e: InvalidKeyException) {
+            secretKey = tryDeleteAndRecreateKey()
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        }
+
         return cipher
     }
 
@@ -129,6 +146,41 @@ class CryptographyManager @Inject constructor(
                         .hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
 
                     if (hasStrongBox) setIsStrongBoxBacked(true)
+                }
+
+                if (ALLOW_DEVICE_CREDENTIALS_AS_SECONDARY_LOGIN) {
+                    if (sdkInt >= Build.VERSION_CODES.R) {
+                        // Samsung seems to require both types even though this framework can
+                        // be configured to only accept biometrics as an authentication type
+                        // and not ask for device credentials (PIN/pattern/etc).
+                        //
+                        // Failure to provide the AUTH_DEVICE_CREDENTIAL flag will result in
+                        // a UserNotAuthenticatedException when initializing the cipher to pass
+                        // into the biometric prompt. It's a catch 22 since you need the cipher
+                        // to provide to the biometric prompt, but the cipher won't initialize
+                        // without a biometric prompt. Here is a possible workaround
+                        // https://stackoverflow.com/a/50905156/ but it involved invoking the
+                        // cipher initializer twice with the legacy FingerprintManager in the
+                        // middle, and that all seemed pretty sus. No amount of reinstalling
+                        // the app or deleting and re-adding biometrics/device credentials
+                        // seems to fix this issue. So, we're using both flags.
+                        //
+                        // Whenever the user is presented with a biometric prompt, the dialog
+                        // will honor the allow/disallow device credentials flag. So, any time
+                        // the user unlocks the key, it will only use biometrics.
+                        //
+                        // Perhaps Samsung requires the AUTH_DEVICE_CREDENTIAL in addition to
+                        // AUTH_BIOMETRIC_STRONG because of this note:
+                        // https://developer.android.com/training/sign-in/biometric-auth#biometric-or-lock-screen
+
+                        setUserAuthenticationParameters(
+                            0,
+                            KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
+                        )
+                    } else {
+                        // Functionally the same call under the hood as above for older platforms
+                        setUserAuthenticationValidityDurationSeconds(0)
+                    }
                 }
             }
             .build()
