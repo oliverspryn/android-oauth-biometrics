@@ -2,8 +2,6 @@ package com.oliverspryn.android.oauthbiometrics.model
 
 import android.content.Context
 import android.content.Intent
-import android.security.keystore.UserNotAuthenticatedException
-import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -131,28 +129,20 @@ class AccountViewModel @Inject constructor(
         }
 
         Single
-            .create<EnableBiometricLoginPayload> { singleEmitter ->
+            .create<Cipher> { singleEmitter ->
                 // Get the error handling for these functions in line with the observable stream
                 // Allows for proper error handling down the stream's error handler
-                try {
-                    val cipher = cryptographyManager.getInitializedCipherForEncryption()
-                    val promptInfo = createBiometricPromptInfoForEnableBiometricLoginUseCase()
-
-                    singleEmitter.onSuccess(
-                        EnableBiometricLoginPayload(
-                            cipher = cipher,
-                            promptInfo = promptInfo
-                        )
-                    )
-                } catch (e: UserNotAuthenticatedException) {
-                    singleEmitter.onError(e)
-                }
+                singleEmitter.onSuccess(cryptographyManager.getInitializedCipherForEncryption())
             }
-            .flatMapObservable { enableBiometricLoginPayload ->
+            .subscribeOn(rxJavaFactory.io)
+            .observeOn(rxJavaFactory.ui)
+            .flatMapObservable { cipher ->
+                val promptInfo = createBiometricPromptInfoForEnableBiometricLoginUseCase()
+
                 presentBiometricPromptForCipherUseCase(
                     activity = activity,
-                    promptInfo = enableBiometricLoginPayload.promptInfo,
-                    cipher = enableBiometricLoginPayload.cipher
+                    promptInfo = promptInfo,
+                    cipher = cipher
                 )
             }
             .observeOn(rxJavaFactory.io)
@@ -288,8 +278,3 @@ data class AccountUiState(
         data class WithData(val payload: AuthZeroRepository.UserInfo) : UserInfoResponse
     }
 }
-
-private data class EnableBiometricLoginPayload(
-    val cipher: Cipher,
-    val promptInfo: BiometricPrompt.PromptInfo
-)
