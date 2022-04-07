@@ -15,6 +15,8 @@
 - Network stack automatically injects the acccess token into the necessary API calls
 - Auto-refresh of the access token
 - Auto-logout when the refresh token is invalidated
+- Identification of what kind of secondary authentication mechanisms are available on the device
+- Showing what kind of secondary authentication was used
 
 **Here are some useful sources that I consulted before building this project:**
 
